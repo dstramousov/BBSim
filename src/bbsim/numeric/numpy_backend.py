@@ -99,20 +99,36 @@ class NumpyBackend:
         if size < 16:
             raise ValueError("grid_size must be at least 16")
 
+        # Start from real white noise, then shape it in Fourier space. This keeps
+        # the field deterministic and real-valued while avoiding the raw
+        # television-static look of unfiltered pixel noise. The result is still a
+        # prototype Gaussian random field, but with visible large-scale structure.
+        white_noise = rng.normal(loc=0.0, scale=1.0, size=(size, size))
+        spectrum = np.fft.rfft2(white_noise)
+
         kx = np.fft.fftfreq(size)
-        ky = np.fft.fftfreq(size)
+        ky = np.fft.rfftfreq(size)
         kx_grid, ky_grid = np.meshgrid(kx, ky, indexing="ij")
         k = np.sqrt(kx_grid * kx_grid + ky_grid * ky_grid)
-        k[0, 0] = 1.0
 
-        scale = max(float(config.fluctuation_scale), 1.0e-3)
-        tilt = float(config.spectral_tilt)
-        power = np.power(k, tilt) * np.exp(-np.square(k / scale))
-        power[0, 0] = 0.0
+        scale = float(np.clip(config.fluctuation_scale, 0.05, 1.0))
+        cutoff = 0.025 + 0.075 * scale
+        tilt = float(np.clip(config.spectral_tilt, 0.1, 2.0))
+        k_floor = 1.0 / float(size)
 
-        phases = rng.uniform(0.0, 2.0 * np.pi, size=(size, size))
-        complex_field = np.sqrt(power) * (np.cos(phases) + 1j * np.sin(phases))
-        field = np.fft.ifft2(complex_field).real
+        large_scale_filter = np.exp(-np.square(k / cutoff))
+        tilt_filter = np.power(k + k_floor, -0.5 * tilt)
+        field_filter = large_scale_filter * tilt_filter
+        field_filter[0, 0] = 0.0
+
+        filtered_spectrum = spectrum * field_filter
+        field = np.fft.irfft2(filtered_spectrum, s=(size, size)).real
+
+        # Add a small deterministic fine component so the seed does not look like
+        # one over-smoothed cloud. The fine layer is deliberately weak; the player
+        # should see future voids and dense regions first, not raw static.
+        fine_noise = rng.normal(loc=0.0, scale=1.0, size=(size, size))
+        field = self.normalize_field(field) + 0.08 * self.normalize_field(fine_noise)
         field = self.normalize_field(field)
         field *= float(config.fluctuation_amplitude)
         return field.astype(np.float32)
@@ -126,16 +142,19 @@ class NumpyBackend:
         kx_grid, ky_grid = np.meshgrid(kx, ky, indexing="ij")
         k = np.sqrt(kx_grid * kx_grid + ky_grid * ky_grid)
 
-        low_band = spectrum[k < 0.08]
-        high_band = spectrum[k > 0.20]
-        total_power = float(spectrum.mean()) + 1.0e-8
+        total_power = float(spectrum.sum()) + 1.0e-8
+        large_power = float(spectrum[k < 0.08].sum()) / total_power
+        fine_power = float(spectrum[k > 0.20].sum()) / total_power
+        mid_power = max(0.0, 1.0 - large_power - fine_power)
 
+        low_percentile = float(np.percentile(field, 5.0))
+        high_percentile = float(np.percentile(field, 95.0))
         ripple_contrast = float(np.clip(field.std() / 0.75, 0.0, 1.0))
-        large_scale_power = float(np.clip(low_band.mean() / total_power, 0.0, 1.0))
-        fine_grain_power = float(np.clip(high_band.mean() / total_power, 0.0, 1.0))
-        void_potential = float(np.clip(abs(float(field.min())) / 2.0, 0.0, 1.0))
-        collapse_risk = float(np.clip(float(field.max()) / 2.0, 0.0, 1.0))
-        isotropy = float(np.clip(1.0 - abs(large_scale_power - fine_grain_power), 0.0, 1.0))
+        large_scale_power = float(np.clip(large_power + 0.35 * mid_power, 0.0, 1.0))
+        fine_grain_power = float(np.clip(fine_power, 0.0, 1.0))
+        void_potential = float(np.clip(abs(low_percentile) / 0.75, 0.0, 1.0))
+        collapse_risk = float(np.clip(high_percentile / 0.75, 0.0, 1.0))
+        isotropy = float(np.clip(1.0 - abs(large_scale_power - 0.65), 0.0, 1.0))
 
         return SeedMetrics(
             ripple_contrast=ripple_contrast,

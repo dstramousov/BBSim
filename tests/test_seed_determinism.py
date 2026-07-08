@@ -27,3 +27,10 @@ def test_different_phrases_produce_different_fields() -> None:
     _, field_b = backend.create_personal_seed(SeedConfig(phrase="Pelevin", grid_size=64))
 
     assert not np.array_equal(field_a, field_b)
+
+
+def test_seed_field_prefers_large_scale_structure() -> None:
+    backend = NumpyBackend()
+    seed, _ = backend.create_personal_seed(SeedConfig(phrase="Dimas", grid_size=128))
+
+    assert seed.metrics.large_scale_power > seed.metrics.fine_grain_power

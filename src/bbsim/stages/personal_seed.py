@@ -4,6 +4,37 @@ from __future__ import annotations
 
 from bbsim.core.context import UniverseRunContext
 from bbsim.core.report import StageReport
+from bbsim.core.seed import SeedMetrics
+
+
+def _describe_seed(metrics: SeedMetrics) -> tuple[str, ...]:
+    """Build a short human-readable signature from measured seed metrics."""
+
+    ripple = (
+        "рябь слабая, структурам будет трудно зацепиться"
+        if metrics.ripple_contrast < 0.25
+        else "рябь сильная, возможны ранние плотные пики"
+        if metrics.ripple_contrast > 0.65
+        else "рябь умеренная, структура должна расти устойчиво"
+    )
+    voids = (
+        "будущие пустоты выражены слабо"
+        if metrics.void_potential < 0.35
+        else "будущие пустоты выражены хорошо"
+    )
+    collapse = (
+        "риск раннего коллапса низкий"
+        if metrics.collapse_risk < 0.45
+        else "риск раннего коллапса заметный"
+        if metrics.collapse_risk < 0.70
+        else "риск раннего коллапса высокий"
+    )
+    scale = (
+        "доминируют крупные пятна будущей космической паутины"
+        if metrics.large_scale_power >= metrics.fine_grain_power
+        else "мелкая зернистость сильнее крупномасштабного рисунка"
+    )
+    return (ripple, voids, collapse, scale)
 
 
 class PersonalSeedStage:
@@ -39,17 +70,24 @@ class PersonalSeedStage:
         if context.seed is None:
             raise RuntimeError("personal seed has not been created")
         metrics = context.seed.metrics
+        signature_lines = _describe_seed(metrics)
         return StageReport(
             stage_id=self.stage_id,
             title="Зерно создано",
             summary_lines=(
                 f"Seed code: {context.seed.public_code}",
                 f"Контраст ряби: {metrics.ripple_contrast:.2f}",
+                f"Крупномасштабный рисунок: {metrics.large_scale_power:.2f}",
+                f"Мелкая зернистость: {metrics.fine_grain_power:.2f}",
                 f"Потенциал пустот: {metrics.void_potential:.2f}",
                 f"Риск раннего коллапса: {metrics.collapse_risk:.2f}",
+                "Сигнатура зерна:",
+                *(f"  {line}" for line in signature_lines),
             ),
             metrics={
                 "ripple_contrast": metrics.ripple_contrast,
+                "large_scale_power": metrics.large_scale_power,
+                "fine_grain_power": metrics.fine_grain_power,
                 "void_potential": metrics.void_potential,
                 "collapse_risk": metrics.collapse_risk,
             },

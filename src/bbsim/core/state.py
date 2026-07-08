@@ -10,7 +10,7 @@ class UniverseState:
     """Global scalar state shared by pipeline stages."""
 
     t_gyr: float = 0.0
-    a: float = 1.0e-6
+    a: float = 1.0e-32
     h_gyr_inv: float = 0.0
     temperature_k: float = 1.0e9
     era: str = "initial"

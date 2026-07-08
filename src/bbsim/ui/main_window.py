@@ -17,11 +17,35 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from bbsim import __version__
 from bbsim.core.config import UniverseConfig
 from bbsim.core.context import UniverseRunContext, create_run_context
 from bbsim.core.pipeline import UniversePipeline, create_default_pipeline
 from bbsim.numeric.numpy_backend import NumpyBackend
 from bbsim.render.field_renderer import field_to_display
+
+_TIMELINE = (
+    ("personal_seed", "Зерно"),
+    ("inflation", "Инфляция"),
+    ("recombination_preview", "CMB"),
+)
+
+
+def _create_seed_colormap() -> pg.ColorMap:
+    """Create a calm cosmic colormap for primordial fields."""
+
+    positions = np.array([0.0, 0.25, 0.50, 0.72, 1.0], dtype=float)
+    colors = np.array(
+        [
+            [5, 8, 28, 255],
+            [24, 26, 83, 255],
+            [73, 106, 171, 255],
+            [185, 216, 230, 255],
+            [255, 239, 184, 255],
+        ],
+        dtype=np.ubyte,
+    )
+    return pg.ColorMap(positions, colors)
 
 
 class MainWindow(QMainWindow):
@@ -29,7 +53,7 @@ class MainWindow(QMainWindow):
 
     def __init__(self) -> None:
         super().__init__()
-        self.setWindowTitle("BBSim v0.0.1")
+        self.setWindowTitle(f"BBSim v{__version__}")
         self._context: UniverseRunContext | None = None
         self._pipeline: UniversePipeline | None = None
 
@@ -37,12 +61,15 @@ class MainWindow(QMainWindow):
         self._new_run_button = QPushButton("Создать запуск")
         self._next_button = QPushButton("Следующий checkpoint")
         self._stage_label = QLabel("Stage: —")
+        self._timeline_label = QLabel(self._format_timeline(None))
+        self._timeline_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self._report = QTextEdit()
         self._report.setReadOnly(True)
 
         self._image = pg.ImageView()
         self._image.ui.roiBtn.hide()
         self._image.ui.menuBtn.hide()
+        self._image.setColorMap(_create_seed_colormap())
 
         self._plot = pg.PlotWidget(title="a(t)")
         self._plot.showGrid(x=True, y=True, alpha=0.25)
@@ -57,7 +84,7 @@ class MainWindow(QMainWindow):
 
     def _build_layout(self) -> QWidget:
         root = QWidget()
-        layout = QHBoxLayout(root)
+        root_layout = QVBoxLayout(root)
 
         left = QWidget()
         left_layout = QVBoxLayout(left)
@@ -79,7 +106,9 @@ class MainWindow(QMainWindow):
         splitter.addWidget(self._image)
         splitter.addWidget(right)
         splitter.setSizes([260, 680, 340])
-        layout.addWidget(splitter)
+
+        root_layout.addWidget(splitter, stretch=1)
+        root_layout.addWidget(self._timeline_label)
         return root
 
     def _create_run(self) -> None:
@@ -88,6 +117,7 @@ class MainWindow(QMainWindow):
         self._pipeline = create_default_pipeline()
         self._report.clear()
         self._plot.clear()
+        self._timeline_label.setText(self._format_timeline(None))
         self._next_checkpoint()
 
     def _next_checkpoint(self) -> None:
@@ -100,6 +130,7 @@ class MainWindow(QMainWindow):
         self._pipeline.step_to_checkpoint(self._context)
         report = self._context.history.reports[-1]
         self._stage_label.setText(f"Stage: {report.stage_id}")
+        self._timeline_label.setText(self._format_timeline(report.stage_id))
         self._show_current_field(report.stage_id)
         self._show_report(report)
         self._update_plot()
@@ -111,12 +142,10 @@ class MainWindow(QMainWindow):
         fields = self._context.fields
         if stage_id == "recombination_preview":
             field = fields.cmb
-        elif stage_id == "inflation":
-            field = fields.seed_delta
         else:
             field = fields.seed_delta
         display = field_to_display(field)
-        self._image.setImage(display.T, autoLevels=True, autoRange=True)
+        self._image.setImage(display.T, levels=(0.0, 1.0), autoRange=True)
 
     def _show_report(self, report) -> None:
         lines = [report.title, ""]
@@ -133,3 +162,11 @@ class MainWindow(QMainWindow):
         self._plot.clear()
         if values.size:
             self._plot.plot(np.arange(values.size), values, pen=pg.mkPen(width=2))
+
+    @staticmethod
+    def _format_timeline(active_stage_id: str | None) -> str:
+        parts = []
+        for stage_id, title in _TIMELINE:
+            marker = "●" if stage_id == active_stage_id else "○"
+            parts.append(f"{marker} {title}")
+        return "   →   ".join(parts)
