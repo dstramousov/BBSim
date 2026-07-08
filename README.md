@@ -59,6 +59,44 @@ field_fill_canvas = true
 BBSIM_APP_CONFIG=/path/to/app.toml bbsim
 ```
 
+
+## Конфиг симуляции
+
+Параметры одного запуска читаются из `config/simulation.toml`. Без файла используются встроенные значения по умолчанию. Эти значения также подставляются в левую UI-панель при старте.
+
+```toml
+[seed]
+phrase = "Dimas"
+grid_size = 192
+fluctuation_amplitude = 0.35
+fluctuation_scale = 0.50
+spectral_tilt = 0.965
+
+[inflation]
+strength = 0.72
+duration = 0.68
+smoothing = 0.85
+visual_duration_s = 40.0
+
+[cosmology]
+h0_gyr_inv = 0.069
+omega_b = 0.049
+omega_dm = 0.265
+omega_lambda = 0.686
+omega_r = 0.0001
+omega_k = 0.0
+```
+
+В UI эти параметры можно менять перед нажатием `Создать запуск`. Во время одного запуска `UniverseConfig` остаётся immutable: изменение полей на панели влияет только на новый run.
+
+Можно указать альтернативный файл через переменную окружения или CLI:
+
+```bash
+BBSIM_SIMULATION_CONFIG=/path/to/simulation.toml bbsim
+python -m bbsim --headless --simulation-config /path/to/simulation.toml
+python -m bbsim --headless --phrase "Other Seed"
+```
+
 ## Первый запуск UI
 
 В UI пока есть минимальная лаборатория:

@@ -6,10 +6,15 @@ import numpy as np
 import pyqtgraph as pg
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
+    QDoubleSpinBox,
+    QFormLayout,
+    QGroupBox,
     QLabel,
     QLineEdit,
     QMainWindow,
     QPushButton,
+    QScrollArea,
+    QSpinBox,
     QSplitter,
     QTextEdit,
     QVBoxLayout,
@@ -18,7 +23,7 @@ from PySide6.QtWidgets import (
 
 from bbsim import __version__
 from bbsim.core.app_config import AppConfig
-from bbsim.core.config import UniverseConfig
+from bbsim.core.config import CosmologyConfig, InflationConfig, SeedConfig, UniverseConfig
 from bbsim.core.context import UniverseRunContext, create_run_context
 from bbsim.core.pipeline import UniversePipeline, create_default_pipeline
 from bbsim.numeric.numpy_backend import NumpyBackend
@@ -51,15 +56,60 @@ def _create_seed_colormap() -> pg.ColorMap:
 class MainWindow(QMainWindow):
     """Minimal prototype window for seed, timeline, field, and report views."""
 
-    def __init__(self, app_config: AppConfig | None = None) -> None:
+    def __init__(
+        self,
+        app_config: AppConfig | None = None,
+        simulation_config: UniverseConfig | None = None,
+    ) -> None:
         super().__init__()
         self.setWindowTitle(f"BBSim v{__version__}")
         self._app_config = app_config or AppConfig()
+        self._base_config = simulation_config or UniverseConfig.default()
         self._field_fill_canvas = self._app_config.view.field_fill_canvas
         self._context: UniverseRunContext | None = None
         self._pipeline: UniversePipeline | None = None
 
-        self._phrase_edit = QLineEdit("Dimas")
+        self._phrase_edit = QLineEdit(self._base_config.seed.phrase)
+        self._grid_size_spin = self._create_int_spin(16, 1024, self._base_config.seed.grid_size, 16)
+        self._ripple_amp_spin = self._create_float_spin(
+            0.0, 2.0, self._base_config.seed.fluctuation_amplitude, 0.01, 3
+        )
+        self._ripple_scale_spin = self._create_float_spin(
+            0.05, 1.0, self._base_config.seed.fluctuation_scale, 0.01, 3
+        )
+        self._spectral_tilt_spin = self._create_float_spin(
+            0.1, 2.0, self._base_config.seed.spectral_tilt, 0.01, 3
+        )
+
+        self._inflation_strength_spin = self._create_float_spin(
+            0.0, 3.0, self._base_config.inflation.strength, 0.01, 3
+        )
+        self._inflation_duration_spin = self._create_float_spin(
+            0.0, 3.0, self._base_config.inflation.duration, 0.01, 3
+        )
+        self._inflation_smoothing_spin = self._create_float_spin(
+            0.0, 1.0, self._base_config.inflation.smoothing, 0.01, 3
+        )
+
+        self._h0_spin = self._create_float_spin(
+            0.001, 1.0, self._base_config.cosmology.h0_gyr_inv, 0.001, 4
+        )
+        self._omega_b_spin = self._create_float_spin(
+            0.0, 2.0, self._base_config.cosmology.omega_b, 0.001, 4
+        )
+        self._omega_dm_spin = self._create_float_spin(
+            0.0, 2.0, self._base_config.cosmology.omega_dm, 0.001, 4
+        )
+        self._omega_lambda_spin = self._create_float_spin(
+            -2.0, 3.0, self._base_config.cosmology.omega_lambda, 0.001, 4
+        )
+        self._omega_r_spin = self._create_float_spin(
+            0.0, 1.0, self._base_config.cosmology.omega_r, 0.0001, 6
+        )
+        self._omega_k_spin = self._create_float_spin(
+            -3.0, 3.0, self._base_config.cosmology.omega_k, 0.001, 4
+        )
+
         self._new_run_button = QPushButton("Создать запуск")
         self._next_button = QPushButton("Следующий checkpoint")
         self._stage_label = QLabel("Stage: —")
@@ -92,14 +142,7 @@ class MainWindow(QMainWindow):
         root = QWidget()
         root_layout = QVBoxLayout(root)
 
-        left = QWidget()
-        left_layout = QVBoxLayout(left)
-        left_layout.addWidget(QLabel("Имя / фраза зерна"))
-        left_layout.addWidget(self._phrase_edit)
-        left_layout.addWidget(self._new_run_button)
-        left_layout.addWidget(self._next_button)
-        left_layout.addWidget(self._stage_label)
-        left_layout.addStretch(1)
+        left = self._build_parameter_panel()
 
         right = QWidget()
         right_layout = QVBoxLayout(right)
@@ -111,20 +154,94 @@ class MainWindow(QMainWindow):
         splitter.addWidget(left)
         splitter.addWidget(self._image)
         splitter.addWidget(right)
-        splitter.setSizes([260, 680, 340])
+        splitter.setSizes([330, 820, 360])
 
         root_layout.addWidget(splitter, stretch=1)
         root_layout.addWidget(self._timeline_label)
         return root
 
+    def _build_parameter_panel(self) -> QWidget:
+        panel = QWidget()
+        layout = QVBoxLayout(panel)
+
+        layout.addWidget(self._create_seed_group())
+        layout.addWidget(self._create_inflation_group())
+        layout.addWidget(self._create_cosmology_group())
+        layout.addWidget(self._new_run_button)
+        layout.addWidget(self._next_button)
+        layout.addWidget(self._stage_label)
+        layout.addStretch(1)
+
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setWidget(panel)
+        scroll.setMinimumWidth(300)
+        return scroll
+
+    def _create_seed_group(self) -> QGroupBox:
+        group = QGroupBox("Seed / первичная рябь")
+        form = QFormLayout(group)
+        form.addRow("Фраза", self._phrase_edit)
+        form.addRow("Размер сетки", self._grid_size_spin)
+        form.addRow("Сила ряби", self._ripple_amp_spin)
+        form.addRow("Масштаб ряби", self._ripple_scale_spin)
+        form.addRow("Спектральный наклон", self._spectral_tilt_spin)
+        return group
+
+    def _create_inflation_group(self) -> QGroupBox:
+        group = QGroupBox("Инфляция")
+        form = QFormLayout(group)
+        form.addRow("Сила", self._inflation_strength_spin)
+        form.addRow("Длительность", self._inflation_duration_spin)
+        form.addRow("Сглаживание", self._inflation_smoothing_spin)
+        return group
+
+    def _create_cosmology_group(self) -> QGroupBox:
+        group = QGroupBox("Космология")
+        form = QFormLayout(group)
+        form.addRow("Начальный разлёт H0", self._h0_spin)
+        form.addRow("Обычная материя Ωb", self._omega_b_spin)
+        form.addRow("Тёмный каркас Ωdm", self._omega_dm_spin)
+        form.addRow("Космический разгон ΩΛ", self._omega_lambda_spin)
+        form.addRow("Горячее излучение Ωr", self._omega_r_spin)
+        form.addRow("Кривизна Ωk", self._omega_k_spin)
+        return group
+
     def _create_run(self) -> None:
-        config = UniverseConfig.default(player_seed_phrase=self._phrase_edit.text())
+        config = self._build_config_from_ui()
+        self._base_config = config
         self._context = create_run_context(config=config, backend=NumpyBackend())
         self._pipeline = create_default_pipeline()
         self._report.clear()
         self._plot.clear()
         self._timeline_label.setText(self._format_timeline(None))
         self._next_checkpoint()
+
+    def _build_config_from_ui(self) -> UniverseConfig:
+        return UniverseConfig(
+            seed=SeedConfig(
+                phrase=self._phrase_edit.text(),
+                grid_size=self._grid_size_spin.value(),
+                fluctuation_amplitude=self._ripple_amp_spin.value(),
+                fluctuation_scale=self._ripple_scale_spin.value(),
+                spectral_tilt=self._spectral_tilt_spin.value(),
+            ),
+            inflation=InflationConfig(
+                strength=self._inflation_strength_spin.value(),
+                duration=self._inflation_duration_spin.value(),
+                smoothing=self._inflation_smoothing_spin.value(),
+                visual_duration_s=self._base_config.inflation.visual_duration_s,
+            ),
+            cosmology=CosmologyConfig(
+                h0_gyr_inv=self._h0_spin.value(),
+                omega_b=self._omega_b_spin.value(),
+                omega_dm=self._omega_dm_spin.value(),
+                omega_lambda=self._omega_lambda_spin.value(),
+                omega_r=self._omega_r_spin.value(),
+                omega_k=self._omega_k_spin.value(),
+            ),
+            structure=self._base_config.structure,
+        )
 
     def _next_checkpoint(self) -> None:
         if self._context is None or self._pipeline is None:
@@ -185,6 +302,29 @@ class MainWindow(QMainWindow):
                 np.log10(positive_values),
                 pen=pg.mkPen(width=2),
             )
+
+    @staticmethod
+    def _create_int_spin(minimum: int, maximum: int, value: int, step: int) -> QSpinBox:
+        spin = QSpinBox()
+        spin.setRange(minimum, maximum)
+        spin.setSingleStep(step)
+        spin.setValue(value)
+        return spin
+
+    @staticmethod
+    def _create_float_spin(
+        minimum: float,
+        maximum: float,
+        value: float,
+        step: float,
+        decimals: int,
+    ) -> QDoubleSpinBox:
+        spin = QDoubleSpinBox()
+        spin.setRange(minimum, maximum)
+        spin.setDecimals(decimals)
+        spin.setSingleStep(step)
+        spin.setValue(value)
+        return spin
 
     @staticmethod
     def _format_timeline(active_stage_id: str | None) -> str:

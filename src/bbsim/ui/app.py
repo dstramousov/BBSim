@@ -7,6 +7,7 @@ import sys
 from PySide6.QtWidgets import QApplication
 
 from bbsim.core.app_config import load_app_config
+from bbsim.core.simulation_config import load_simulation_config
 from bbsim.ui.main_window import MainWindow
 
 
@@ -15,7 +16,8 @@ def run_app() -> int:
 
     app = QApplication(sys.argv)
     app_config = load_app_config()
-    window = MainWindow(app_config=app_config)
+    simulation_config = load_simulation_config()
+    window = MainWindow(app_config=app_config, simulation_config=simulation_config)
 
     if app_config.window.mode == "maximized":
         window.showMaximized()

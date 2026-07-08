@@ -37,3 +37,12 @@
 - Центральная визуализация поля растягивается на весь canvas при `field_fill_canvas = true`.
 - Скрыта служебная histogram-панель `ImageView`, чтобы поле занимало больше полезной площади.
 - Синхронизирована версия проекта до 0.0.5.
+
+## v0.0.5 -> v0.0.6
+
+- Добавлен TOML-конфиг симуляции `config/simulation.toml` для seed, inflation, cosmology и prototype structure параметров.
+- Добавлен загрузчик `load_simulation_config()` с поддержкой `BBSIM_SIMULATION_CONFIG`, CLI override и безопасной валидацией значений.
+- Headless-режим теперь читает simulation config и позволяет передать `--simulation-config`; `--phrase` стал override поверх файла.
+- В левую UI-панель добавлены базовые параметры инициализации: seed field, инфляция, H0, обычная материя, тёмная материя, тёмная энергия, радиация и кривизна.
+- `Создать запуск` теперь собирает `UniverseConfig` из UI-панели, поэтому параметры реально влияют на seed, inflation и CMB-preview.
+- Синхронизирована версия проекта до 0.0.6.

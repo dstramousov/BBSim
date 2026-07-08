@@ -1,0 +1,33 @@
+# BBSim simulation config.
+# These values define the initial universe for one deterministic run.
+
+[seed]
+phrase = "Dimas"
+grid_size = 192
+fluctuation_amplitude = 0.35
+fluctuation_scale = 0.50
+spectral_tilt = 0.965
+
+[inflation]
+strength = 0.72
+duration = 0.68
+smoothing = 0.85
+visual_duration_s = 40.0
+
+[cosmology]
+h0_gyr_inv = 0.069
+omega_b = 0.049
+omega_dm = 0.265
+omega_lambda = 0.686
+omega_r = 0.0001
+omega_k = 0.0
+
+[structure]
+gravity_strength = 1.0
+baryon_infall = 0.8
+gas_pressure = 0.3
+cooling_efficiency = 0.55
+star_formation_efficiency = 0.45
+feedback_strength = 0.40
+metal_yield = 0.25
+black_hole_efficiency = 0.15
