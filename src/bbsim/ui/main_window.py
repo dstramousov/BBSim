@@ -28,12 +28,7 @@ from bbsim.core.context import UniverseRunContext, create_run_context
 from bbsim.core.pipeline import UniversePipeline, create_default_pipeline
 from bbsim.numeric.numpy_backend import NumpyBackend
 from bbsim.render.field_renderer import field_to_display
-
-_TIMELINE = (
-    ("personal_seed", "Зерно"),
-    ("inflation", "Инфляция"),
-    ("recombination_preview", "CMB"),
-)
+from bbsim.ui.timeline_panel import TimelinePanel, TimelineViewState
 
 
 def _create_seed_colormap() -> pg.ColorMap:
@@ -113,8 +108,7 @@ class MainWindow(QMainWindow):
         self._new_run_button = QPushButton("Создать запуск")
         self._next_button = QPushButton("Следующий checkpoint")
         self._stage_label = QLabel("Stage: —")
-        self._timeline_label = QLabel(self._format_timeline(None))
-        self._timeline_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self._timeline_panel = TimelinePanel()
         self._report = QTextEdit()
         self._report.setReadOnly(True)
 
@@ -157,7 +151,7 @@ class MainWindow(QMainWindow):
         splitter.setSizes([330, 820, 360])
 
         root_layout.addWidget(splitter, stretch=1)
-        root_layout.addWidget(self._timeline_label)
+        root_layout.addWidget(self._timeline_panel)
         return root
 
     def _build_parameter_panel(self) -> QWidget:
@@ -214,7 +208,7 @@ class MainWindow(QMainWindow):
         self._pipeline = create_default_pipeline()
         self._report.clear()
         self._plot.clear()
-        self._timeline_label.setText(self._format_timeline(None))
+        self._timeline_panel.set_timeline_state(TimelineViewState())
         self._next_checkpoint()
 
     def _build_config_from_ui(self) -> UniverseConfig:
@@ -253,7 +247,7 @@ class MainWindow(QMainWindow):
         self._pipeline.step_to_checkpoint(self._context)
         report = self._context.history.reports[-1]
         self._stage_label.setText(f"Stage: {report.stage_id}")
-        self._timeline_label.setText(self._format_timeline(report.stage_id))
+        self._update_timeline(report.stage_id)
         self._show_current_field(report.stage_id)
         self._show_report(report)
         self._update_plot()
@@ -326,10 +320,16 @@ class MainWindow(QMainWindow):
         spin.setValue(value)
         return spin
 
-    @staticmethod
-    def _format_timeline(active_stage_id: str | None) -> str:
-        parts = []
-        for stage_id, title in _TIMELINE:
-            marker = "●" if stage_id == active_stage_id else "○"
-            parts.append(f"{marker} {title}")
-        return "   →   ".join(parts)
+    def _update_timeline(self, active_stage_id: str | None) -> None:
+        if self._context is None:
+            self._timeline_panel.set_timeline_state(TimelineViewState())
+            return
+
+        completed_stage_ids = tuple(report.stage_id for report in self._context.history.reports)
+        self._timeline_panel.set_timeline_state(
+            TimelineViewState(
+                active_stage_id=active_stage_id,
+                completed_stage_ids=completed_stage_ids,
+                local_stage_progress=self._context.state.stage_progress,
+            )
+        )
