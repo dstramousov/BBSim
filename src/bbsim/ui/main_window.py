@@ -6,7 +6,6 @@ import numpy as np
 import pyqtgraph as pg
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
-    QHBoxLayout,
     QLabel,
     QLineEdit,
     QMainWindow,
@@ -18,6 +17,7 @@ from PySide6.QtWidgets import (
 )
 
 from bbsim import __version__
+from bbsim.core.app_config import AppConfig
 from bbsim.core.config import UniverseConfig
 from bbsim.core.context import UniverseRunContext, create_run_context
 from bbsim.core.pipeline import UniversePipeline, create_default_pipeline
@@ -51,9 +51,11 @@ def _create_seed_colormap() -> pg.ColorMap:
 class MainWindow(QMainWindow):
     """Minimal prototype window for seed, timeline, field, and report views."""
 
-    def __init__(self) -> None:
+    def __init__(self, app_config: AppConfig | None = None) -> None:
         super().__init__()
         self.setWindowTitle(f"BBSim v{__version__}")
+        self._app_config = app_config or AppConfig()
+        self._field_fill_canvas = self._app_config.view.field_fill_canvas
         self._context: UniverseRunContext | None = None
         self._pipeline: UniversePipeline | None = None
 
@@ -69,7 +71,11 @@ class MainWindow(QMainWindow):
         self._image = pg.ImageView()
         self._image.ui.roiBtn.hide()
         self._image.ui.menuBtn.hide()
+        self._image.ui.histogram.hide()
         self._image.setColorMap(_create_seed_colormap())
+        self._image.getView().setDefaultPadding(0.0)
+        self._image.getView().setMouseEnabled(x=False, y=False)
+        self._image.getView().setAspectLocked(not self._field_fill_canvas)
 
         self._plot = pg.PlotWidget(title="log10 a(t)")
         self._plot.showGrid(x=True, y=True, alpha=0.25)
@@ -146,8 +152,18 @@ class MainWindow(QMainWindow):
             field = fields.inflation_delta
         else:
             field = fields.seed_delta
-        display = field_to_display(field)
-        self._image.setImage(display.T, levels=(0.0, 1.0), autoRange=True)
+        display = field_to_display(field).T
+        self._image.setImage(display, levels=(0.0, 1.0), autoRange=False)
+        self._fit_field_to_canvas(display.shape)
+
+    def _fit_field_to_canvas(self, image_shape: tuple[int, ...]) -> None:
+        if len(image_shape) < 2:
+            return
+        width = int(image_shape[0])
+        height = int(image_shape[1])
+        view = self._image.getView()
+        view.setAspectLocked(not self._field_fill_canvas)
+        view.setRange(xRange=(0, width), yRange=(0, height), padding=0.0)
 
     def _show_report(self, report) -> None:
         lines = [report.title, ""]

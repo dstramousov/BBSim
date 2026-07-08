@@ -1,0 +1,12 @@
+# BBSim application config.
+# window.mode: normal / maximized / fullscreen
+
+[window]
+mode = "maximized"
+width = 1400
+height = 900
+
+[view]
+# true  — stretch the current field to fill the central canvas.
+# false — keep the numeric field aspect ratio.
+field_fill_canvas = true
