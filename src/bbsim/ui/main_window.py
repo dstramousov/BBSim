@@ -352,6 +352,7 @@ class MainWindow(QMainWindow):
                 omega_r=self._omega_r_spin.value(),
                 omega_k=self._omega_k_spin.value(),
             ),
+            early_universe=self._base_config.early_universe,
             structure=self._base_config.structure,
         )
 
@@ -405,6 +406,8 @@ class MainWindow(QMainWindow):
         fields = self._context.fields
         if stage_id == "recombination_preview" and np.any(fields.cmb):
             field = fields.cmb
+        elif stage_id in {"reheating", "nucleosynthesis"} and np.any(fields.radiation):
+            field = fields.radiation
         elif stage_id == "inflation" and np.any(fields.inflation_delta):
             field = fields.inflation_delta
         elif np.any(fields.seed_delta):

@@ -91,6 +91,11 @@ omega_dm = 0.265
 omega_lambda = 0.686
 omega_r = 0.0001
 omega_k = 0.0
+
+[early_universe]
+reheating_visual_duration_s = 6.0
+nucleosynthesis_visual_duration_s = 6.0
+recombination_visual_duration_s = 7.0
 ```
 
 В UI эти параметры можно менять перед нажатием `BIG BANG`. Во время одного запуска `UniverseConfig` остаётся immutable: изменение полей на панели влияет только на новый run.
@@ -110,7 +115,7 @@ python -m bbsim --headless --phrase "Other Seed"
 - поле фразы зерна;
 - одна главная кнопка `BIG BANG` / `ПАУЗА` / `ПРОДОЛЖИТЬ` / `НОВАЯ ВСЕЛЕННАЯ`;
 - галочка `Останавливаться на эпохах`;
-- live-карта первичного поля, инфляции и CMB-like перехода;
+- live-карта первичного поля, инфляции, разогрева, нуклеосинтеза и CMB-like перехода;
 - график `a(t)`, обновляющийся во время live-эволюции;
 - текстовый отчёт checkpoint-а;
 - полноширинный нижний timeline с визуальным бегущим progress-bar эпох.

@@ -38,6 +38,11 @@ omega_dm = 0.31
 omega_lambda = 0.62
 omega_r = 0.0002
 omega_k = 0.01
+
+[early_universe]
+reheating_visual_duration_s = 4.0
+nucleosynthesis_visual_duration_s = 5.0
+recombination_visual_duration_s = 6.0
 """.strip(),
         encoding="utf-8",
     )
@@ -59,6 +64,9 @@ omega_k = 0.01
     assert config.cosmology.omega_lambda == 0.62
     assert config.cosmology.omega_r == 0.0002
     assert config.cosmology.omega_k == 0.01
+    assert config.early_universe.reheating_visual_duration_s == 4.0
+    assert config.early_universe.nucleosynthesis_visual_duration_s == 5.0
+    assert config.early_universe.recombination_visual_duration_s == 6.0
 
 
 def test_simulation_config_phrase_override_wins(tmp_path: Path) -> None:
@@ -94,6 +102,11 @@ omega_dm = 10
 omega_lambda = 10
 omega_r = -3
 omega_k = 10
+
+[early_universe]
+reheating_visual_duration_s = 0
+nucleosynthesis_visual_duration_s = 999
+recombination_visual_duration_s = "slow"
 """.strip(),
         encoding="utf-8",
     )
@@ -115,3 +128,9 @@ omega_k = 10
     assert config.cosmology.omega_lambda == 3.0
     assert config.cosmology.omega_r == 0.0
     assert config.cosmology.omega_k == 3.0
+    assert config.early_universe.reheating_visual_duration_s == 1.0
+    assert config.early_universe.nucleosynthesis_visual_duration_s == 600.0
+    assert (
+        config.early_universe.recombination_visual_duration_s
+        == UniverseConfig.default().early_universe.recombination_visual_duration_s
+    )

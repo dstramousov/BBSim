@@ -10,6 +10,7 @@ from typing import Any
 
 from bbsim.core.config import (
     CosmologyConfig,
+    EarlyUniverseConfig,
     InflationConfig,
     SeedConfig,
     StructureConfig,
@@ -69,6 +70,9 @@ def _parse_simulation_config(raw: dict[str, Any], defaults: UniverseConfig) -> U
         seed=_parse_seed_config(raw.get("seed", {}), defaults.seed),
         cosmology=_parse_cosmology_config(raw.get("cosmology", {}), defaults.cosmology),
         inflation=_parse_inflation_config(raw.get("inflation", {}), defaults.inflation),
+        early_universe=_parse_early_universe_config(
+            raw.get("early_universe", {}), defaults.early_universe
+        ),
         structure=_parse_structure_config(raw.get("structure", {}), defaults.structure),
     )
 
@@ -137,6 +141,33 @@ def _parse_inflation_config(raw: Any, defaults: InflationConfig) -> InflationCon
         visual_duration_s=_bounded_float(
             raw.get("visual_duration_s"),
             defaults.visual_duration_s,
+            minimum=1.0,
+            maximum=600.0,
+        ),
+    )
+
+
+def _parse_early_universe_config(raw: Any, defaults: EarlyUniverseConfig) -> EarlyUniverseConfig:
+    if not isinstance(raw, dict):
+        return defaults
+
+    return replace(
+        defaults,
+        reheating_visual_duration_s=_bounded_float(
+            raw.get("reheating_visual_duration_s"),
+            defaults.reheating_visual_duration_s,
+            minimum=1.0,
+            maximum=600.0,
+        ),
+        nucleosynthesis_visual_duration_s=_bounded_float(
+            raw.get("nucleosynthesis_visual_duration_s"),
+            defaults.nucleosynthesis_visual_duration_s,
+            minimum=1.0,
+            maximum=600.0,
+        ),
+        recombination_visual_duration_s=_bounded_float(
+            raw.get("recombination_visual_duration_s"),
+            defaults.recombination_visual_duration_s,
             minimum=1.0,
             maximum=600.0,
         ),

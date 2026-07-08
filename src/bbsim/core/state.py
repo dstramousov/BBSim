@@ -17,5 +17,9 @@ class UniverseState:
     current_stage: str = "not_started"
     stage_progress: float = 0.0
     curvature: float = 0.0
+    hydrogen_fraction: float = 0.0
+    helium_fraction: float = 0.0
+    lithium_trace: float = 0.0
+    heavy_elements_fraction: float = 0.0
     a_history: list[float] = field(default_factory=list)
     t_history: list[float] = field(default_factory=list)

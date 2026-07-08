@@ -20,6 +20,8 @@ def test_default_pipeline_reaches_all_initial_checkpoints() -> None:
     assert [report.stage_id for report in context.history.reports] == [
         "personal_seed",
         "inflation",
+        "reheating",
+        "nucleosynthesis",
         "recombination_preview",
     ]
 
@@ -43,3 +45,20 @@ def test_live_step_advances_inflation_without_fast_forwarding() -> None:
     assert context.state.current_stage == "inflation"
     assert 0.0 < context.state.stage_progress < 1.0
     assert context.fields.inflation_delta.any()
+
+
+def test_reheating_and_nucleosynthesis_update_early_fields() -> None:
+    config = UniverseConfig.default(player_seed_phrase="Dimas")
+    context = create_run_context(config=config, backend=NumpyBackend())
+    pipeline = create_default_pipeline()
+
+    while not pipeline.is_finished:
+        pipeline.step_to_checkpoint(context)
+        pipeline.advance(context)
+
+    reports = {report.stage_id: report for report in context.history.reports}
+    assert "reheating" in reports
+    assert "nucleosynthesis" in reports
+    assert context.fields.radiation.any()
+    assert context.state.hydrogen_fraction > 0.7
+    assert context.state.helium_fraction > 0.2

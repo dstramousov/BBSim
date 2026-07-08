@@ -44,6 +44,15 @@ class SeedConfig:
 
 
 @dataclass(frozen=True, slots=True)
+class EarlyUniverseConfig:
+    """Visual timing and simple outputs for early live universe stages."""
+
+    reheating_visual_duration_s: float = 6.0
+    nucleosynthesis_visual_duration_s: float = 6.0
+    recombination_visual_duration_s: float = 7.0
+
+
+@dataclass(frozen=True, slots=True)
 class StructureConfig:
     """Prototype parameters for later structure growth stages."""
 
@@ -64,6 +73,7 @@ class UniverseConfig:
     seed: SeedConfig
     cosmology: CosmologyConfig
     inflation: InflationConfig
+    early_universe: EarlyUniverseConfig
     structure: StructureConfig
 
     @staticmethod
@@ -81,5 +91,6 @@ class UniverseConfig:
             seed=SeedConfig(phrase=player_seed_phrase),
             cosmology=CosmologyConfig(),
             inflation=InflationConfig(),
+            early_universe=EarlyUniverseConfig(),
             structure=StructureConfig(),
         )

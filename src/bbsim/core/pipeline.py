@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from bbsim.core.context import UniverseRunContext
 from bbsim.core.report import StageReport
 from bbsim.stages.base import SimulationStage
+from bbsim.stages.early_universe import NucleosynthesisStage, ReheatingStage
 from bbsim.stages.inflation import InflationStage
 from bbsim.stages.personal_seed import PersonalSeedStage
 from bbsim.stages.recombination import RecombinationPreviewStage
@@ -101,5 +102,11 @@ def create_default_pipeline() -> UniversePipeline:
     """Create the initial prototype pipeline."""
 
     return UniversePipeline(
-        stages=[PersonalSeedStage(), InflationStage(), RecombinationPreviewStage()]
+        stages=[
+            PersonalSeedStage(),
+            InflationStage(),
+            ReheatingStage(),
+            NucleosynthesisStage(),
+            RecombinationPreviewStage(),
+        ]
     )
