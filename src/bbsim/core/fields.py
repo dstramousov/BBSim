@@ -16,6 +16,7 @@ class UniverseFields:
     """
 
     seed_delta: np.ndarray
+    inflation_delta: np.ndarray
     dark_density: np.ndarray
     baryon_density: np.ndarray
     radiation: np.ndarray
@@ -40,6 +41,7 @@ def create_empty_fields(grid_size: int) -> UniverseFields:
     zero = np.zeros(shape, dtype=np.float32)
     return UniverseFields(
         seed_delta=zero.copy(),
+        inflation_delta=zero.copy(),
         dark_density=zero.copy(),
         baryon_density=zero.copy(),
         radiation=zero.copy(),

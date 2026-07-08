@@ -94,6 +94,40 @@ class NumpyBackend:
         ) * 0.25
         return ((1.0 - alpha) * base + alpha * neighbors).astype(np.float32)
 
+    def apply_inflation_smoothing(self, field: np.ndarray, smoothing: float) -> np.ndarray:
+        """Suppress fine fluctuation noise while keeping the large-scale seed pattern.
+
+        Inflation in the prototype is represented in comoving coordinates: the grid
+        size does not grow, but the physical scale of each cell does. This helper
+        creates the checkpoint visual field by damping high-frequency power instead
+        of resampling the array into a larger texture.
+        """
+
+        base = self.normalize_field(field)
+        size = base.shape[0]
+        strength = float(np.clip(smoothing, 0.0, 1.0))
+
+        spectrum = np.fft.rfft2(base)
+        kx = np.fft.fftfreq(size)
+        ky = np.fft.rfftfreq(size)
+        kx_grid, ky_grid = np.meshgrid(kx, ky, indexing="ij")
+        k = np.sqrt(kx_grid * kx_grid + ky_grid * ky_grid)
+
+        # Keep the strongest large-scale modes and increasingly damp fine modes as
+        # smoothing grows. The blend preserves some texture so the result is not a
+        # featureless cloud after inflation.
+        cutoff = 0.035 + 0.030 * (1.0 - strength)
+        low_pass = np.exp(-np.power(k / cutoff, 4.0))
+        low_pass[0, 0] = 0.0
+
+        smoothed = np.fft.irfft2(spectrum * low_pass, s=base.shape).real
+        smoothed = self.normalize_field(smoothed)
+        blend = 0.18 * (1.0 - strength)
+        result = (1.0 - blend) * smoothed + blend * base
+        result = self.normalize_field(result)
+        result *= float(np.std(field))
+        return result.astype(np.float32)
+
     def _generate_gaussian_field(self, config: SeedConfig, rng: np.random.Generator) -> np.ndarray:
         size = config.grid_size
         if size < 16:

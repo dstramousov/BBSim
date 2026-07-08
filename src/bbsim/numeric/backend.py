@@ -35,3 +35,15 @@ class NumericBackend(Protocol):
     def diffuse(self, field: np.ndarray, amount: float) -> np.ndarray:
         """Return a diffused copy of a numeric field."""
         ...
+
+    def apply_inflation_smoothing(self, field: np.ndarray, smoothing: float) -> np.ndarray:
+        """Return an inflation-smoothed copy of a primordial field.
+
+        Args:
+            field: Primordial fluctuation field.
+            smoothing: Smoothing amount in [0, 1].
+
+        Returns:
+            Float32 field with preserved large-scale structure and suppressed fine noise.
+        """
+        ...

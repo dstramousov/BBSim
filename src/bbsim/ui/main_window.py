@@ -71,9 +71,9 @@ class MainWindow(QMainWindow):
         self._image.ui.menuBtn.hide()
         self._image.setColorMap(_create_seed_colormap())
 
-        self._plot = pg.PlotWidget(title="a(t)")
+        self._plot = pg.PlotWidget(title="log10 a(t)")
         self._plot.showGrid(x=True, y=True, alpha=0.25)
-        self._plot.setLabel("left", "scale factor a")
+        self._plot.setLabel("left", "log10 scale factor a")
         self._plot.setLabel("bottom", "sample")
 
         self._new_run_button.clicked.connect(self._create_run)
@@ -142,6 +142,8 @@ class MainWindow(QMainWindow):
         fields = self._context.fields
         if stage_id == "recombination_preview":
             field = fields.cmb
+        elif stage_id == "inflation" and np.any(fields.inflation_delta):
+            field = fields.inflation_delta
         else:
             field = fields.seed_delta
         display = field_to_display(field)
@@ -160,8 +162,13 @@ class MainWindow(QMainWindow):
             return
         values = np.asarray(self._context.state.a_history, dtype=float)
         self._plot.clear()
-        if values.size:
-            self._plot.plot(np.arange(values.size), values, pen=pg.mkPen(width=2))
+        positive_values = values[values > 0.0]
+        if positive_values.size:
+            self._plot.plot(
+                np.arange(positive_values.size),
+                np.log10(positive_values),
+                pen=pg.mkPen(width=2),
+            )
 
     @staticmethod
     def _format_timeline(active_stage_id: str | None) -> str:
