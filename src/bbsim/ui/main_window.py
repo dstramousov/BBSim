@@ -16,6 +16,7 @@ from PySide6.QtWidgets import (
     QScrollArea,
     QSpinBox,
     QSplitter,
+    QStackedWidget,
     QTextEdit,
     QVBoxLayout,
     QWidget,
@@ -105,12 +106,30 @@ class MainWindow(QMainWindow):
             -3.0, 3.0, self._base_config.cosmology.omega_k, 0.001, 4
         )
 
-        self._new_run_button = QPushButton("Создать запуск")
+        self._new_run_button = QPushButton("Создать зерно")
         self._next_button = QPushButton("Следующий checkpoint")
-        self._stage_label = QLabel("Stage: —")
+        self._next_button.setEnabled(False)
+        self._stage_label = QLabel("Состояние: ожидание параметров")
         self._timeline_panel = TimelinePanel()
         self._report = QTextEdit()
         self._report.setReadOnly(True)
+        self._pipeline_finished_reported = False
+
+        self._field_placeholder = QLabel(
+            "Вселенная ещё не создана\n\n"
+            "Введите фразу зерна и параметры слева.\n"
+            "Затем нажмите «Создать зерно»."
+        )
+        self._field_placeholder.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self._field_placeholder.setObjectName("fieldPlaceholder")
+        self._field_placeholder.setStyleSheet(
+            "QLabel#fieldPlaceholder {"
+            "background-color: #050608;"
+            "color: #bfc7d5;"
+            "font-size: 18px;"
+            "border: 1px solid #24262c;"
+            "}"
+        )
 
         self._image = pg.ImageView()
         self._image.ui.roiBtn.hide()
@@ -121,16 +140,36 @@ class MainWindow(QMainWindow):
         self._image.getView().setMouseEnabled(x=False, y=False)
         self._image.getView().setAspectLocked(not self._field_fill_canvas)
 
+        self._field_stack = QStackedWidget()
+        self._field_stack.addWidget(self._field_placeholder)
+        self._field_stack.addWidget(self._image)
+
+        self._plot_placeholder = QLabel(
+            "График появится после создания зерна и запуска pipeline."
+        )
+        self._plot_placeholder.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self._plot_placeholder.setObjectName("plotPlaceholder")
+        self._plot_placeholder.setStyleSheet(
+            "QLabel#plotPlaceholder {"
+            "background-color: #050608;"
+            "color: #9ba3b1;"
+            "border: 1px solid #24262c;"
+            "}"
+        )
         self._plot = pg.PlotWidget(title="log10 a(t)")
         self._plot.showGrid(x=True, y=True, alpha=0.25)
         self._plot.setLabel("left", "log10 scale factor a")
         self._plot.setLabel("bottom", "sample")
 
+        self._plot_stack = QStackedWidget()
+        self._plot_stack.addWidget(self._plot_placeholder)
+        self._plot_stack.addWidget(self._plot)
+
         self._new_run_button.clicked.connect(self._create_run)
         self._next_button.clicked.connect(self._next_checkpoint)
 
         self.setCentralWidget(self._build_layout())
-        self._create_run()
+        self._show_idle_state()
 
     def _build_layout(self) -> QWidget:
         root = QWidget()
@@ -140,13 +179,13 @@ class MainWindow(QMainWindow):
 
         right = QWidget()
         right_layout = QVBoxLayout(right)
-        right_layout.addWidget(self._plot, stretch=1)
+        right_layout.addWidget(self._plot_stack, stretch=1)
         right_layout.addWidget(QLabel("Отчёт checkpoint-а"))
         right_layout.addWidget(self._report, stretch=2)
 
         splitter = QSplitter(Qt.Orientation.Horizontal)
         splitter.addWidget(left)
-        splitter.addWidget(self._image)
+        splitter.addWidget(self._field_stack)
         splitter.addWidget(right)
         splitter.setSizes([330, 820, 360])
 
@@ -201,14 +240,36 @@ class MainWindow(QMainWindow):
         form.addRow("Кривизна Ωk", self._omega_k_spin)
         return group
 
+    def _show_idle_state(self) -> None:
+        self._context = None
+        self._pipeline = None
+        self._pipeline_finished_reported = False
+        self._field_stack.setCurrentWidget(self._field_placeholder)
+        self._plot_stack.setCurrentWidget(self._plot_placeholder)
+        self._plot.clear()
+        self._timeline_panel.set_timeline_state(TimelineViewState())
+        self._report.setPlainText(
+            "Ожидание создания зерна\n\n"
+            "Заполните параметры слева и нажмите «Создать зерно».\n\n"
+            "После этого здесь появятся seed code, метрики первичной ряби "
+            "и прогноз будущей структуры."
+        )
+        self._stage_label.setText("Состояние: ожидание параметров")
+        self._next_button.setEnabled(False)
+
     def _create_run(self) -> None:
         config = self._build_config_from_ui()
         self._base_config = config
         self._context = create_run_context(config=config, backend=NumpyBackend())
         self._pipeline = create_default_pipeline()
+        self._pipeline_finished_reported = False
         self._report.clear()
         self._plot.clear()
+        self._field_stack.setCurrentWidget(self._image)
+        self._plot_stack.setCurrentWidget(self._plot)
         self._timeline_panel.set_timeline_state(TimelineViewState())
+        self._new_run_button.setText("Пересоздать зерно")
+        self._next_button.setEnabled(True)
         self._next_checkpoint()
 
     def _build_config_from_ui(self) -> UniverseConfig:
@@ -241,7 +302,10 @@ class MainWindow(QMainWindow):
         if self._context is None or self._pipeline is None:
             return
         if self._pipeline.is_finished:
-            self._append_report_text("Pipeline завершён.")
+            if not self._pipeline_finished_reported:
+                self._append_report_text("Pipeline завершён.")
+                self._pipeline_finished_reported = True
+            self._next_button.setEnabled(False)
             return
 
         self._pipeline.step_to_checkpoint(self._context)
@@ -252,6 +316,8 @@ class MainWindow(QMainWindow):
         self._show_report(report)
         self._update_plot()
         self._pipeline.advance(self._context)
+        if self._pipeline.is_finished:
+            self._next_button.setEnabled(False)
 
     def _show_current_field(self, stage_id: str) -> None:
         if self._context is None:
@@ -264,6 +330,7 @@ class MainWindow(QMainWindow):
         else:
             field = fields.seed_delta
         display = field_to_display(field).T
+        self._field_stack.setCurrentWidget(self._image)
         self._image.setImage(display, levels=(0.0, 1.0), autoRange=False)
         self._fit_field_to_canvas(display.shape)
 
@@ -286,11 +353,13 @@ class MainWindow(QMainWindow):
 
     def _update_plot(self) -> None:
         if self._context is None:
+            self._plot_stack.setCurrentWidget(self._plot_placeholder)
             return
         values = np.asarray(self._context.state.a_history, dtype=float)
         self._plot.clear()
         positive_values = values[values > 0.0]
         if positive_values.size:
+            self._plot_stack.setCurrentWidget(self._plot)
             self._plot.plot(
                 np.arange(positive_values.size),
                 np.log10(positive_values),
