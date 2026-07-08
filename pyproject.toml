@@ -1,0 +1,41 @@
+[build-system]
+requires = ["hatchling>=1.25"]
+build-backend = "hatchling.build"
+
+[project]
+name = "bbsim"
+version = "0.0.1"
+description = "Prototype 2D Big Bang / universe evolution simulator."
+readme = "README.md"
+requires-python = ">=3.12"
+authors = [{ name = "BBSim" }]
+dependencies = [
+  "numpy>=1.26",
+  "PySide6>=6.7",
+  "pyqtgraph>=0.13.7",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.0",
+  "ruff>=0.6",
+]
+
+[project.scripts]
+bbsim = "bbsim.__main__:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/bbsim"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "SIM"]
+ignore = []
