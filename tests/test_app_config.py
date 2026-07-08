@@ -13,6 +13,8 @@ def test_missing_app_config_uses_defaults(tmp_path: Path) -> None:
     assert config.window.height == 900
     assert config.window.mode == "normal"
     assert config.view.field_fill_canvas is True
+    assert config.timeline.pause_on_epochs is True
+    assert config.timeline.tick_interval_ms == 33
 
 
 def test_app_config_loads_window_and_view_settings(tmp_path: Path) -> None:
@@ -26,6 +28,10 @@ height = 1000
 
 [view]
 field_fill_canvas = false
+
+[timeline]
+pause_on_epochs = false
+tick_interval_ms = 50
 """.strip(),
         encoding="utf-8",
     )
@@ -36,6 +42,8 @@ field_fill_canvas = false
     assert config.window.width == 1600
     assert config.window.height == 1000
     assert config.view.field_fill_canvas is False
+    assert config.timeline.pause_on_epochs is False
+    assert config.timeline.tick_interval_ms == 50
 
 
 def test_invalid_app_config_values_fall_back_to_defaults(tmp_path: Path) -> None:
@@ -49,10 +57,17 @@ height = "big"
 
 [view]
 field_fill_canvas = "yes"
+
+[timeline]
+pause_on_epochs = "sometimes"
+tick_interval_ms = 1
 """.strip(),
         encoding="utf-8",
     )
 
     config = load_app_config(config_path)
 
-    assert config == AppConfig()
+    assert config.window == AppConfig().window
+    assert config.view == AppConfig().view
+    assert config.timeline.pause_on_epochs is True
+    assert config.timeline.tick_interval_ms == 16

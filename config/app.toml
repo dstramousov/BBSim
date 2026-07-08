@@ -10,3 +10,11 @@ height = 900
 # true  — stretch the current field to fill the central canvas.
 # false — keep the numeric field aspect ratio.
 field_fill_canvas = true
+
+[timeline]
+# true  — pause at epoch checkpoints and wait for the user to continue.
+# false — keep evolving through checkpoints without stopping.
+pause_on_epochs = true
+
+# UI update interval for live evolution. Lower values are smoother but cost more CPU.
+tick_interval_ms = 33

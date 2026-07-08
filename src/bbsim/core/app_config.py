@@ -28,11 +28,20 @@ class ViewConfig:
 
 
 @dataclass(frozen=True, slots=True)
+class TimelineConfig:
+    """Configuration for live timeline playback."""
+
+    pause_on_epochs: bool = True
+    tick_interval_ms: int = 33
+
+
+@dataclass(frozen=True, slots=True)
 class AppConfig:
     """Mutable-free application settings loaded before the Qt window is shown."""
 
     window: WindowConfig = WindowConfig()
     view: ViewConfig = ViewConfig()
+    timeline: TimelineConfig = TimelineConfig()
 
 
 def load_app_config(path: Path | str | None = None) -> AppConfig:
@@ -79,7 +88,8 @@ def _parse_app_config(raw: dict[str, Any]) -> AppConfig:
     defaults = AppConfig()
     window = _parse_window_config(raw.get("window", {}), defaults.window)
     view = _parse_view_config(raw.get("view", {}), defaults.view)
-    return AppConfig(window=window, view=view)
+    timeline = _parse_timeline_config(raw.get("timeline", {}), defaults.timeline)
+    return AppConfig(window=window, view=view, timeline=timeline)
 
 
 def _parse_window_config(raw: Any, defaults: WindowConfig) -> WindowConfig:
@@ -105,9 +115,35 @@ def _parse_view_config(raw: Any, defaults: ViewConfig) -> ViewConfig:
     return replace(defaults, field_fill_canvas=field_fill_canvas)
 
 
+def _parse_timeline_config(raw: Any, defaults: TimelineConfig) -> TimelineConfig:
+    if not isinstance(raw, dict):
+        return defaults
+
+    pause_on_epochs = raw.get("pause_on_epochs", defaults.pause_on_epochs)
+    if not isinstance(pause_on_epochs, bool):
+        pause_on_epochs = defaults.pause_on_epochs
+
+    tick_interval_ms = _bounded_int(
+        raw.get("tick_interval_ms"), defaults.tick_interval_ms, minimum=16, maximum=250
+    )
+    return replace(
+        defaults,
+        pause_on_epochs=pause_on_epochs,
+        tick_interval_ms=tick_interval_ms,
+    )
+
+
 def _positive_int(value: Any, default: int) -> int:
     if isinstance(value, bool):
         return default
     if isinstance(value, int) and value > 0:
         return value
+    return default
+
+
+def _bounded_int(value: Any, default: int, minimum: int, maximum: int) -> int:
+    if isinstance(value, bool):
+        return default
+    if isinstance(value, int):
+        return int(min(max(value, minimum), maximum))
     return default

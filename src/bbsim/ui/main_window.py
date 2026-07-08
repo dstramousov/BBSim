@@ -4,8 +4,9 @@ from __future__ import annotations
 
 import numpy as np
 import pyqtgraph as pg
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, QTimer
 from PySide6.QtWidgets import (
+    QCheckBox,
     QDoubleSpinBox,
     QFormLayout,
     QGroupBox,
@@ -30,6 +31,12 @@ from bbsim.core.pipeline import UniversePipeline, create_default_pipeline
 from bbsim.numeric.numpy_backend import NumpyBackend
 from bbsim.render.field_renderer import field_to_display
 from bbsim.ui.timeline_panel import TimelinePanel, TimelineViewState
+
+_RUN_IDLE = "idle"
+_RUN_RUNNING = "running"
+_RUN_PAUSED = "paused"
+_RUN_CHECKPOINT_PAUSE = "checkpoint_pause"
+_RUN_FINISHED = "finished"
 
 
 def _create_seed_colormap() -> pg.ColorMap:
@@ -64,6 +71,7 @@ class MainWindow(QMainWindow):
         self._field_fill_canvas = self._app_config.view.field_fill_canvas
         self._context: UniverseRunContext | None = None
         self._pipeline: UniversePipeline | None = None
+        self._run_state = _RUN_IDLE
 
         self._phrase_edit = QLineEdit(self._base_config.seed.phrase)
         self._grid_size_spin = self._create_int_spin(16, 1024, self._base_config.seed.grid_size, 16)
@@ -106,9 +114,10 @@ class MainWindow(QMainWindow):
             -3.0, 3.0, self._base_config.cosmology.omega_k, 0.001, 4
         )
 
-        self._new_run_button = QPushButton("Создать зерно")
-        self._next_button = QPushButton("Следующий checkpoint")
-        self._next_button.setEnabled(False)
+        self._main_button = QPushButton("BIG BANG")
+        self._main_button.setMinimumHeight(42)
+        self._pause_on_epochs_check = QCheckBox("Останавливаться на эпохах")
+        self._pause_on_epochs_check.setChecked(self._app_config.timeline.pause_on_epochs)
         self._stage_label = QLabel("Состояние: ожидание параметров")
         self._timeline_panel = TimelinePanel()
         self._report = QTextEdit()
@@ -118,7 +127,7 @@ class MainWindow(QMainWindow):
         self._field_placeholder = QLabel(
             "Вселенная ещё не создана\n\n"
             "Введите фразу зерна и параметры слева.\n"
-            "Затем нажмите «Создать зерно»."
+            "Затем нажмите BIG BANG."
         )
         self._field_placeholder.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self._field_placeholder.setObjectName("fieldPlaceholder")
@@ -145,7 +154,7 @@ class MainWindow(QMainWindow):
         self._field_stack.addWidget(self._image)
 
         self._plot_placeholder = QLabel(
-            "График появится после создания зерна и запуска pipeline."
+            "График появится после запуска BIG BANG."
         )
         self._plot_placeholder.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self._plot_placeholder.setObjectName("plotPlaceholder")
@@ -165,8 +174,28 @@ class MainWindow(QMainWindow):
         self._plot_stack.addWidget(self._plot_placeholder)
         self._plot_stack.addWidget(self._plot)
 
-        self._new_run_button.clicked.connect(self._create_run)
-        self._next_button.clicked.connect(self._next_checkpoint)
+        self._parameter_widgets: tuple[QWidget, ...] = (
+            self._phrase_edit,
+            self._grid_size_spin,
+            self._ripple_amp_spin,
+            self._ripple_scale_spin,
+            self._spectral_tilt_spin,
+            self._inflation_strength_spin,
+            self._inflation_duration_spin,
+            self._inflation_smoothing_spin,
+            self._h0_spin,
+            self._omega_b_spin,
+            self._omega_dm_spin,
+            self._omega_lambda_spin,
+            self._omega_r_spin,
+            self._omega_k_spin,
+        )
+
+        self._timer = QTimer(self)
+        self._timer.setInterval(self._app_config.timeline.tick_interval_ms)
+        self._timer.timeout.connect(self._tick_simulation)
+
+        self._main_button.clicked.connect(self._handle_main_button)
 
         self.setCentralWidget(self._build_layout())
         self._show_idle_state()
@@ -180,7 +209,7 @@ class MainWindow(QMainWindow):
         right = QWidget()
         right_layout = QVBoxLayout(right)
         right_layout.addWidget(self._plot_stack, stretch=1)
-        right_layout.addWidget(QLabel("Отчёт checkpoint-а"))
+        right_layout.addWidget(QLabel("Отчёт эпохи"))
         right_layout.addWidget(self._report, stretch=2)
 
         splitter = QSplitter(Qt.Orientation.Horizontal)
@@ -200,8 +229,8 @@ class MainWindow(QMainWindow):
         layout.addWidget(self._create_seed_group())
         layout.addWidget(self._create_inflation_group())
         layout.addWidget(self._create_cosmology_group())
-        layout.addWidget(self._new_run_button)
-        layout.addWidget(self._next_button)
+        layout.addWidget(self._pause_on_epochs_check)
+        layout.addWidget(self._main_button)
         layout.addWidget(self._stage_label)
         layout.addStretch(1)
 
@@ -241,23 +270,35 @@ class MainWindow(QMainWindow):
         return group
 
     def _show_idle_state(self) -> None:
+        self._timer.stop()
         self._context = None
         self._pipeline = None
+        self._run_state = _RUN_IDLE
         self._pipeline_finished_reported = False
+        self._set_parameter_inputs_enabled(True)
         self._field_stack.setCurrentWidget(self._field_placeholder)
         self._plot_stack.setCurrentWidget(self._plot_placeholder)
         self._plot.clear()
         self._timeline_panel.set_timeline_state(TimelineViewState())
         self._report.setPlainText(
-            "Ожидание создания зерна\n\n"
-            "Заполните параметры слева и нажмите «Создать зерно».\n\n"
-            "После этого здесь появятся seed code, метрики первичной ряби "
-            "и прогноз будущей структуры."
+            "Ожидание BIG BANG\n\n"
+            "Заполните параметры слева.\n"
+            "Кнопка BIG BANG зафиксирует параметры, создаст зерно "
+            "и запустит живую эволюцию эпох."
         )
         self._stage_label.setText("Состояние: ожидание параметров")
-        self._next_button.setEnabled(False)
+        self._main_button.setText("BIG BANG")
+        self._main_button.setEnabled(True)
 
-    def _create_run(self) -> None:
+    def _handle_main_button(self) -> None:
+        if self._run_state in {_RUN_IDLE, _RUN_FINISHED}:
+            self._start_big_bang()
+        elif self._run_state == _RUN_RUNNING:
+            self._pause_live_run()
+        elif self._run_state in {_RUN_PAUSED, _RUN_CHECKPOINT_PAUSE}:
+            self._resume_live_run()
+
+    def _start_big_bang(self) -> None:
         config = self._build_config_from_ui()
         self._base_config = config
         self._context = create_run_context(config=config, backend=NumpyBackend())
@@ -268,9 +309,25 @@ class MainWindow(QMainWindow):
         self._field_stack.setCurrentWidget(self._image)
         self._plot_stack.setCurrentWidget(self._plot)
         self._timeline_panel.set_timeline_state(TimelineViewState())
-        self._new_run_button.setText("Пересоздать зерно")
-        self._next_button.setEnabled(True)
-        self._next_checkpoint()
+        self._set_parameter_inputs_enabled(False)
+        self._run_state = _RUN_RUNNING
+        self._main_button.setText("ПАУЗА")
+        self._stage_label.setText("Состояние: эволюция запущена")
+        self._timer.start()
+
+    def _pause_live_run(self) -> None:
+        self._timer.stop()
+        self._run_state = _RUN_PAUSED
+        self._main_button.setText("ПРОДОЛЖИТЬ")
+        self._stage_label.setText("Состояние: пауза")
+
+    def _resume_live_run(self) -> None:
+        if self._context is None or self._pipeline is None or self._pipeline.is_finished:
+            return
+        self._run_state = _RUN_RUNNING
+        self._main_button.setText("ПАУЗА")
+        self._stage_label.setText("Состояние: эволюция идёт")
+        self._timer.start()
 
     def _build_config_from_ui(self) -> UniverseConfig:
         return UniverseConfig(
@@ -298,37 +355,62 @@ class MainWindow(QMainWindow):
             structure=self._base_config.structure,
         )
 
-    def _next_checkpoint(self) -> None:
+    def _tick_simulation(self) -> None:
         if self._context is None or self._pipeline is None:
             return
         if self._pipeline.is_finished:
-            if not self._pipeline_finished_reported:
-                self._append_report_text("Pipeline завершён.")
-                self._pipeline_finished_reported = True
-            self._next_button.setEnabled(False)
+            self._finish_live_run()
             return
 
-        self._pipeline.step_to_checkpoint(self._context)
-        report = self._context.history.reports[-1]
-        self._stage_label.setText(f"Stage: {report.stage_id}")
-        self._update_timeline(report.stage_id)
-        self._show_current_field(report.stage_id)
-        self._show_report(report)
+        dt = self._timer.interval() / 1000.0
+        report = self._pipeline.step_live(self._context, dt=dt)
+        active_stage_id = self._context.state.current_stage
+        self._show_current_field(active_stage_id)
+        self._update_timeline(active_stage_id)
         self._update_plot()
-        self._pipeline.advance(self._context)
-        if self._pipeline.is_finished:
-            self._next_button.setEnabled(False)
 
-    def _show_current_field(self, stage_id: str) -> None:
+        if report is None:
+            self._stage_label.setText(f"Эпоха: {active_stage_id}")
+            return
+
+        self._show_report(report)
+        self._pipeline.advance(self._context)
+        self._update_timeline(report.stage_id)
+
+        if self._pipeline.is_finished:
+            self._finish_live_run()
+            return
+
+        if self._pause_on_epochs_check.isChecked():
+            self._timer.stop()
+            self._run_state = _RUN_CHECKPOINT_PAUSE
+            self._main_button.setText("ПРОДОЛЖИТЬ")
+            self._stage_label.setText(f"Checkpoint: {report.title}")
+        else:
+            self._stage_label.setText(f"Checkpoint пройден: {report.title}")
+
+    def _finish_live_run(self) -> None:
+        self._timer.stop()
+        self._run_state = _RUN_FINISHED
+        self._main_button.setText("НОВАЯ ВСЕЛЕННАЯ")
+        self._set_parameter_inputs_enabled(True)
+        if not self._pipeline_finished_reported:
+            self._append_report_text("\nPipeline завершён.")
+            self._pipeline_finished_reported = True
+        self._stage_label.setText("Состояние: pipeline завершён")
+
+    def _show_current_field(self, stage_id: str | None) -> None:
         if self._context is None:
             return
         fields = self._context.fields
-        if stage_id == "recombination_preview":
+        if stage_id == "recombination_preview" and np.any(fields.cmb):
             field = fields.cmb
         elif stage_id == "inflation" and np.any(fields.inflation_delta):
             field = fields.inflation_delta
-        else:
+        elif np.any(fields.seed_delta):
             field = fields.seed_delta
+        else:
+            return
         display = field_to_display(field).T
         self._field_stack.setCurrentWidget(self._image)
         self._image.setImage(display, levels=(0.0, 1.0), autoRange=False)
@@ -395,10 +477,17 @@ class MainWindow(QMainWindow):
             return
 
         completed_stage_ids = tuple(report.stage_id for report in self._context.history.reports)
+        progress = self._context.state.stage_progress
+        if active_stage_id in completed_stage_ids:
+            progress = 1.0
         self._timeline_panel.set_timeline_state(
             TimelineViewState(
                 active_stage_id=active_stage_id,
                 completed_stage_ids=completed_stage_ids,
-                local_stage_progress=self._context.state.stage_progress,
+                local_stage_progress=progress,
             )
         )
+
+    def _set_parameter_inputs_enabled(self, enabled: bool) -> None:
+        for widget in self._parameter_widgets:
+            widget.setEnabled(enabled)

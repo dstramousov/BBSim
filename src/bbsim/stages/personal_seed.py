@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import numpy as np
+
 from bbsim.core.context import UniverseRunContext
 from bbsim.core.report import StageReport
 from bbsim.core.seed import SeedMetrics
@@ -37,32 +39,65 @@ def _describe_seed(metrics: SeedMetrics) -> tuple[str, ...]:
     return (ripple, voids, collapse, scale)
 
 
+def _smoothstep(value: float) -> float:
+    clamped = float(np.clip(value, 0.0, 1.0))
+    return clamped * clamped * (3.0 - 2.0 * clamped)
+
+
 class PersonalSeedStage:
     """Create the deterministic seed field from the user's phrase."""
 
     stage_id = "personal_seed"
     title = "Личное зерно"
 
+    def __init__(self, visual_duration_s: float = 1.6) -> None:
+        self._visual_duration_s = max(visual_duration_s, 1.0e-6)
+        self._elapsed_s = 0.0
+        self._target_field: np.ndarray | None = None
+
     def enter(self, context: UniverseRunContext) -> None:
-        """Generate the seed and initialize density fields."""
+        """Generate the seed metadata and start a visible field reveal."""
 
         context.state.current_stage = self.stage_id
+        context.state.era = "seed"
+        context.state.stage_progress = 0.0
+        self._elapsed_s = 0.0
+
         seed, field = context.backend.create_personal_seed(context.config.seed)
         context.seed = seed
-        context.fields.seed_delta = field
-        context.fields.dark_density = 1.0 + field
-        context.fields.baryon_density = 1.0 + context.backend.diffuse(field, amount=0.65)
-        context.state.stage_progress = 1.0
+        self._target_field = field.astype(np.float32, copy=True)
+        context.fields.seed_delta = np.zeros_like(self._target_field, dtype=np.float32)
+        context.fields.dark_density = np.ones_like(self._target_field, dtype=np.float32)
+        context.fields.baryon_density = np.ones_like(self._target_field, dtype=np.float32)
 
     def step(self, context: UniverseRunContext, dt: float) -> None:
-        """No-op because seed generation is an immediate checkpoint."""
+        """Reveal the seed field over a short visual interval."""
 
-        _ = (context, dt)
+        if self._target_field is None:
+            raise RuntimeError("personal seed stage entered without a target field")
+
+        self._elapsed_s = min(self._visual_duration_s, self._elapsed_s + max(dt, 0.0))
+        progress = self._elapsed_s / self._visual_duration_s
+        reveal = _smoothstep(progress)
+        displayed = (self._target_field * reveal).astype(np.float32)
+
+        context.fields.seed_delta = displayed
+        context.fields.dark_density = 1.0 + displayed
+        context.fields.baryon_density = 1.0 + context.backend.diffuse(displayed, amount=0.65)
+        context.state.stage_progress = progress
+
+        if progress >= 1.0:
+            context.fields.seed_delta = self._target_field.copy()
+            context.fields.dark_density = 1.0 + context.fields.seed_delta
+            context.fields.baryon_density = 1.0 + context.backend.diffuse(
+                context.fields.seed_delta,
+                amount=0.65,
+            )
 
     def is_complete(self, context: UniverseRunContext) -> bool:
-        """Return true after seed generation."""
+        """Return true after the seed reveal completes."""
 
-        return context.seed is not None
+        return context.seed is not None and context.state.stage_progress >= 1.0
 
     def build_report(self, context: UniverseRunContext) -> StageReport:
         """Build the personal seed checkpoint report."""

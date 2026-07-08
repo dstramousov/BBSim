@@ -20,7 +20,7 @@ class InflationStage:
         self._elapsed_s = 0.0
         self._initial_a = 1.0e-32
         self._initial_curvature = 0.0
-        self._field_prepared = False
+        self._target_delta = None
 
     def enter(self, context: UniverseRunContext) -> None:
         """Capture initial state for the inflation stage."""
@@ -31,7 +31,7 @@ class InflationStage:
         self._elapsed_s = 0.0
         self._initial_a = context.state.a
         self._initial_curvature = context.state.curvature
-        self._field_prepared = False
+        self._target_delta = None
         context.state.a_history.append(context.state.a)
         context.state.t_history.append(context.state.t_gyr)
 
@@ -52,17 +52,28 @@ class InflationStage:
         context.state.a_history.append(context.state.a)
         context.state.t_history.append(context.state.t_gyr)
 
-        if progress >= 1.0 and not self._field_prepared:
-            context.fields.inflation_delta = context.backend.apply_inflation_smoothing(
-                context.fields.seed_delta,
-                smoothing=params.smoothing,
+        context.fields.inflation_delta = self._build_live_field(context, progress)
+        context.fields.dark_density = 1.0 + context.fields.inflation_delta
+        context.fields.baryon_density = 1.0 + context.backend.diffuse(
+            context.fields.inflation_delta,
+            amount=0.75,
+        )
+
+    def _build_live_field(self, context: UniverseRunContext, progress: float) -> np.ndarray:
+        """Return the current live inflation field for a visual progress value."""
+
+        seed = context.fields.seed_delta
+        if self._target_delta is None:
+            self._target_delta = context.backend.apply_inflation_smoothing(
+                seed,
+                smoothing=context.config.inflation.smoothing,
             )
-            context.fields.dark_density = 1.0 + context.fields.inflation_delta
-            context.fields.baryon_density = 1.0 + context.backend.diffuse(
-                context.fields.inflation_delta,
-                amount=0.75,
-            )
-            self._field_prepared = True
+
+        blend = float(np.clip(progress, 0.0, 1.0))
+        current = (1.0 - blend) * seed + blend * self._target_delta
+        current = context.backend.normalize_field(current)
+        current *= float(np.std(seed))
+        return current.astype(np.float32)
 
     def is_complete(self, context: UniverseRunContext) -> bool:
         """Return true when the visual inflation stage is complete."""

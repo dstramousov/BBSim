@@ -9,38 +9,67 @@ from bbsim.core.expansion import compute_hubble_gyr_inv, detect_era
 from bbsim.core.report import StageReport
 
 
+def _smoothstep(value: float) -> float:
+    clamped = float(np.clip(value, 0.0, 1.0))
+    return clamped * clamped * (3.0 - 2.0 * clamped)
+
+
 class RecombinationPreviewStage:
     """Create a CMB-like snapshot from the inflation-shaped fluctuation field."""
 
     stage_id = "recombination_preview"
     title = "Рекомбинация / CMB"
 
+    def __init__(self, visual_duration_s: float = 7.0) -> None:
+        self._visual_duration_s = max(visual_duration_s, 1.0e-6)
+        self._elapsed_s = 0.0
+        self._initial_a = 1.0e-32
+        self._source: np.ndarray | None = None
+        self._target_cmb: np.ndarray | None = None
+
     def enter(self, context: UniverseRunContext) -> None:
-        """Create the CMB-like field snapshot."""
+        """Prepare a live transition from post-inflation field to CMB imprint."""
 
         context.state.current_stage = self.stage_id
-        context.state.a = max(context.state.a, 9.0e-4)
-        context.state.h_gyr_inv = compute_hubble_gyr_inv(context.state.a, context.config.cosmology)
-        context.state.era = detect_era(context.state.a, context.config.cosmology)
-        context.state.temperature_k = 3000.0
+        context.state.stage_progress = 0.0
+        self._elapsed_s = 0.0
+        self._initial_a = context.state.a
 
         source = context.fields.inflation_delta
         if not np.any(source):
             source = context.fields.seed_delta
-        cmb = context.backend.apply_inflation_smoothing(source, smoothing=0.45)
-        context.fields.cmb = context.backend.normalize_field(cmb)
-
-        context.state.stage_progress = 1.0
+        self._source = context.backend.normalize_field(source)
+        target = context.backend.apply_inflation_smoothing(self._source, smoothing=0.45)
+        self._target_cmb = context.backend.normalize_field(target)
+        context.fields.cmb = self._source.astype(np.float32, copy=True)
         context.state.a_history.append(context.state.a)
         context.state.t_history.append(context.state.t_gyr)
 
     def step(self, context: UniverseRunContext, dt: float) -> None:
-        """No-op because the CMB snapshot is an immediate checkpoint."""
+        """Advance the visible CMB transition over the stage duration."""
 
-        _ = (context, dt)
+        if self._source is None or self._target_cmb is None:
+            raise RuntimeError("recombination stage entered without source fields")
+
+        self._elapsed_s = min(self._visual_duration_s, self._elapsed_s + max(dt, 0.0))
+        progress = self._elapsed_s / self._visual_duration_s
+        visible_progress = _smoothstep(progress)
+
+        target_a = 9.0e-4
+        live_a = self._initial_a + (target_a - self._initial_a) * visible_progress
+        context.state.a = max(self._initial_a, live_a)
+        context.state.h_gyr_inv = compute_hubble_gyr_inv(context.state.a, context.config.cosmology)
+        context.state.era = detect_era(context.state.a, context.config.cosmology)
+        context.state.temperature_k = 1.0e9 + (3000.0 - 1.0e9) * visible_progress
+        context.state.stage_progress = progress
+
+        live_cmb = (1.0 - visible_progress) * self._source + visible_progress * self._target_cmb
+        context.fields.cmb = context.backend.normalize_field(live_cmb)
+        context.state.a_history.append(context.state.a)
+        context.state.t_history.append(context.state.t_gyr)
 
     def is_complete(self, context: UniverseRunContext) -> bool:
-        """Return true after the CMB-like snapshot is created."""
+        """Return true after the CMB-like snapshot is complete."""
 
         return context.state.stage_progress >= 1.0
 

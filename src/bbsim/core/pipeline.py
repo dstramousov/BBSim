@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from bbsim.core.context import UniverseRunContext
+from bbsim.core.report import StageReport
 from bbsim.stages.base import SimulationStage
 from bbsim.stages.inflation import InflationStage
 from bbsim.stages.personal_seed import PersonalSeedStage
@@ -50,6 +51,27 @@ class UniversePipeline:
         if stage is None:
             return
         stage.step(context, dt)
+
+    def step_live(self, context: UniverseRunContext, dt: float) -> StageReport | None:
+        """Advance the current stage once and return a report at checkpoint.
+
+        Unlike :meth:`step_to_checkpoint`, this method does not fast-forward. It is
+        intended for GUI playback where every tick should update fields, graphs, and
+        timeline position so the user can watch an epoch evolve continuously.
+        """
+
+        self.enter_current(context)
+        stage = self.current_stage
+        if stage is None:
+            return None
+
+        stage.step(context, dt)
+        if not stage.is_complete(context):
+            return None
+
+        report = stage.build_report(context)
+        context.history.add_report(report)
+        return report
 
     def step_to_checkpoint(self, context: UniverseRunContext) -> None:
         """Advance the current stage until it reaches its checkpoint."""
