@@ -27,10 +27,12 @@ from PySide6.QtWidgets import (
 from bbsim import __version__
 from bbsim.core.app_config import AppConfig
 from bbsim.core.config import CosmologyConfig, InflationConfig, SeedConfig, UniverseConfig
+from bbsim.core.epoch_notes import get_epoch_note
 from bbsim.core.context import UniverseRunContext, create_run_context
 from bbsim.core.pipeline import UniversePipeline, create_default_pipeline
 from bbsim.numeric.numpy_backend import NumpyBackend
 from bbsim.core.scale import build_scale_overlay_lines
+from bbsim.core.time_director import sample_time_scale
 from bbsim.render.field_renderer import field_to_display
 from bbsim.ui.space_overlay import SpaceScaleOverlay
 from bbsim.ui.timeline_panel import TimelinePanel, TimelineViewState
@@ -53,6 +55,57 @@ def _create_seed_colormap() -> pg.ColorMap:
             [73, 106, 171, 255],
             [185, 216, 230, 255],
             [255, 239, 184, 255],
+        ],
+        dtype=np.ubyte,
+    )
+    return pg.ColorMap(positions, colors)
+
+
+def _create_hot_plasma_colormap() -> pg.ColorMap:
+    """Create a hot plasma colormap for reheating."""
+
+    positions = np.array([0.0, 0.25, 0.50, 0.75, 1.0], dtype=float)
+    colors = np.array(
+        [
+            [10, 4, 20, 255],
+            [75, 12, 60, 255],
+            [180, 55, 32, 255],
+            [255, 150, 54, 255],
+            [255, 244, 190, 255],
+        ],
+        dtype=np.ubyte,
+    )
+    return pg.ColorMap(positions, colors)
+
+
+def _create_cooling_colormap() -> pg.ColorMap:
+    """Create a cooler plasma colormap for nucleosynthesis."""
+
+    positions = np.array([0.0, 0.25, 0.55, 0.78, 1.0], dtype=float)
+    colors = np.array(
+        [
+            [8, 10, 33, 255],
+            [35, 37, 104, 255],
+            [54, 127, 168, 255],
+            [163, 220, 206, 255],
+            [255, 232, 150, 255],
+        ],
+        dtype=np.ubyte,
+    )
+    return pg.ColorMap(positions, colors)
+
+
+def _create_cmb_colormap() -> pg.ColorMap:
+    """Create a CMB-like blue/yellow colormap."""
+
+    positions = np.array([0.0, 0.28, 0.50, 0.72, 1.0], dtype=float)
+    colors = np.array(
+        [
+            [9, 8, 38, 255],
+            [32, 63, 128, 255],
+            [135, 183, 210, 255],
+            [243, 220, 138, 255],
+            [255, 246, 204, 255],
         ],
         dtype=np.ubyte,
     )
@@ -165,7 +218,15 @@ class MainWindow(QMainWindow):
         self._image.ui.roiBtn.hide()
         self._image.ui.menuBtn.hide()
         self._image.ui.histogram.hide()
-        self._image.setColorMap(_create_seed_colormap())
+        self._stage_colormaps = {
+            "personal_seed": _create_seed_colormap(),
+            "inflation": _create_seed_colormap(),
+            "reheating": _create_hot_plasma_colormap(),
+            "nucleosynthesis": _create_cooling_colormap(),
+            "recombination": _create_cmb_colormap(),
+        }
+        self._current_colormap_stage: str | None = None
+        self._image.setColorMap(self._stage_colormaps["personal_seed"])
         self._image.getView().setDefaultPadding(0.0)
         self._image.getView().setMouseEnabled(x=False, y=False)
         self._image.getView().setAspectLocked(not self._field_fill_canvas)
@@ -434,6 +495,7 @@ class MainWindow(QMainWindow):
                 omega_k=self._omega_k_spin.value(),
             ),
             early_universe=self._base_config.early_universe,
+            time_director=self._base_config.time_director,
             scale=self._base_config.scale,
             structure=self._base_config.structure,
         )
@@ -484,46 +546,60 @@ class MainWindow(QMainWindow):
         self._stage_label.setText("Состояние: pipeline завершён")
 
 
-    @staticmethod
-    def _live_stage_status(stage_id: str | None) -> str:
-        title_by_stage = {
-            "personal_seed": "Зерно — проявляется первичная рябь",
-            "inflation": "Инфляция — растягивается сетка пространства",
-            "reheating": "Разогрев — рождается горячая плазма",
-            "nucleosynthesis": "Нуклеосинтез — формируется первичный состав",
-            "recombination": "CMB — Вселенная становится прозрачной",
-        }
-        return f"Эпоха: {title_by_stage.get(stage_id, stage_id or 'нет')}"
+    def _live_stage_status(self, stage_id: str | None) -> str:
+        note = get_epoch_note(stage_id)
+        return f"Эпоха: {note.title} — {note.visual_hint}"
 
     def _show_live_status(self, stage_id: str | None) -> None:
         if self._context is None:
             return
-        text_by_stage = {
-            "personal_seed": (
-                "BIG BANG запущен\n\n"
-                "Эпоха: Зерно\n"
-                "Первичная рябь проявляется из фразы и становится начальным полем."
-            ),
-            "inflation": (
-                "Эпоха: Инфляция\n\n"
-                "Сетка пространства растягивается, мелкая рябь сглаживается, "
-                "крупный рисунок будущей структуры сохраняется."
-            ),
-            "reheating": (
-                "Эпоха: Разогрев\n\n"
-                "Энергия инфляции переходит в горячую радиационную плазму."
-            ),
-            "nucleosynthesis": (
-                "Эпоха: Нуклеосинтез\n\n"
-                "Плазма охлаждается, формируется первичный водород и гелий."
-            ),
-            "recombination": (
-                "Эпоха: Рекомбинация / CMB\n\n"
-                "Ионизация и непрозрачность падают, реликтовый отпечаток освобождается."
-            ),
-        }
-        if stage_id in text_by_stage:
-            self._report.setPlainText(text_by_stage[stage_id])
+        note = get_epoch_note(stage_id)
+        time_sample = sample_time_scale(
+            self._context.config,
+            stage_id,
+            self._context.state.stage_progress,
+        )
+        lines = [note.title, "", note.summary, "", "Что происходит:"]
+        lines.extend(f"• {bullet}" for bullet in note.bullets)
+        lines.append("")
+        lines.append(f"Визуально: {note.visual_hint}.")
+        if time_sample is not None:
+            lines.extend(
+                (
+                    "",
+                    "Шкала времени:",
+                    f"• {time_sample.physical_time_text}",
+                    f"• {time_sample.screen_duration_text}",
+                    f"• {time_sample.time_scale_text}",
+                    f"• отображение: {time_sample.mapping_text}",
+                )
+            )
+        self._report.setPlainText("\n".join(lines))
+
+    def _apply_stage_colormap(self, stage_id: str | None) -> None:
+        key = stage_id if stage_id in self._stage_colormaps else "personal_seed"
+        if self._current_colormap_stage == key:
+            return
+        self._image.setColorMap(self._stage_colormaps[key])
+        self._current_colormap_stage = key
+
+    @staticmethod
+    def _apply_stage_visual_profile(
+        display: np.ndarray,
+        stage_id: str | None,
+        progress: float,
+    ) -> np.ndarray:
+        clamped = np.clip(display, 0.0, 1.0)
+        if stage_id == "reheating":
+            pulse = 0.10 * np.sin(progress * np.pi * 6.0)
+            return np.clip(np.power(clamped, 0.62) + pulse, 0.0, 1.0)
+        if stage_id == "nucleosynthesis":
+            cooling = _smooth_visual_progress(progress)
+            return np.clip((1.0 - 0.18 * cooling) * clamped + 0.08 * (1.0 - cooling), 0.0, 1.0)
+        if stage_id == "recombination":
+            clearing = _smooth_visual_progress(progress)
+            return np.clip((0.72 + 0.28 * clearing) * clamped, 0.0, 1.0)
+        return clamped
 
     def _show_current_field(self, stage_id: str | None) -> None:
         if self._context is None:
@@ -540,6 +616,10 @@ class MainWindow(QMainWindow):
         else:
             return
         display = field_to_display(field).T
+        self._apply_stage_colormap(stage_id)
+        display = self._apply_stage_visual_profile(
+            display, stage_id, self._context.state.stage_progress
+        )
         if stage_id == "personal_seed":
             display = np.clip(
                 display * _seed_reveal_visibility(self._context.state.stage_progress),

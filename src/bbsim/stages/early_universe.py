@@ -10,6 +10,7 @@ from bbsim.core.context import UniverseRunContext
 from bbsim.core.expansion import ExpansionEngine
 from bbsim.core.report import StageReport
 from bbsim.core.scale import sample_scale
+from bbsim.core.time_director import stage_screen_duration_s
 
 
 def _smoothstep(value: float) -> float:
@@ -68,7 +69,14 @@ class ReheatingStage:
         if self._source is None or self._thermal_pattern is None:
             raise RuntimeError("reheating stage entered without source fields")
 
-        duration = max(context.config.early_universe.reheating_visual_duration_s, 1.0e-6)
+        duration = max(
+            stage_screen_duration_s(
+                context.config,
+                self.stage_id,
+                context.config.early_universe.reheating_visual_duration_s,
+            ),
+            1.0e-6,
+        )
         self._elapsed_s = min(duration, self._elapsed_s + max(dt, 0.0))
         progress = self._elapsed_s / duration
         visible = _smoothstep(progress)
@@ -156,7 +164,14 @@ class NucleosynthesisStage:
         if self._source is None or self._target is None:
             raise RuntimeError("nucleosynthesis stage entered without source fields")
 
-        duration = max(context.config.early_universe.nucleosynthesis_visual_duration_s, 1.0e-6)
+        duration = max(
+            stage_screen_duration_s(
+                context.config,
+                self.stage_id,
+                context.config.early_universe.nucleosynthesis_visual_duration_s,
+            ),
+            1.0e-6,
+        )
         self._elapsed_s = min(duration, self._elapsed_s + max(dt, 0.0))
         progress = self._elapsed_s / duration
         visible = _smoothstep(progress)

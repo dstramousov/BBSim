@@ -10,6 +10,7 @@ from bbsim.core.context import UniverseRunContext
 from bbsim.core.expansion import ExpansionEngine
 from bbsim.core.report import StageReport
 from bbsim.core.scale import sample_scale
+from bbsim.core.time_director import stage_screen_duration_s
 
 
 def _smoothstep(value: float) -> float:
@@ -92,7 +93,14 @@ class RecombinationStage:
         if self._source is None or self._hazy_plasma is None or self._target_cmb is None:
             raise RuntimeError("recombination stage entered without source fields")
 
-        duration = max(context.config.early_universe.recombination_visual_duration_s, 1.0e-6)
+        duration = max(
+            stage_screen_duration_s(
+                context.config,
+                self.stage_id,
+                context.config.early_universe.recombination_visual_duration_s,
+            ),
+            1.0e-6,
+        )
         self._elapsed_s = min(duration, self._elapsed_s + max(dt, 0.0))
         progress = self._elapsed_s / duration
         cooling_progress = _smoothstep(progress)

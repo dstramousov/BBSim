@@ -12,6 +12,7 @@ spectral_tilt = 0.965
 strength = 0.72
 duration = 0.68
 smoothing = 0.85
+# Legacy fallback; cinematic playback uses [time_director] below.
 visual_duration_s = 8.0
 
 [cosmology]
@@ -23,9 +24,20 @@ omega_r = 0.0001
 omega_k = 0.0
 
 [early_universe]
+# Legacy fallbacks; cinematic playback uses [time_director] below.
 reheating_visual_duration_s = 6.0
 nucleosynthesis_visual_duration_s = 6.0
 recombination_visual_duration_s = 7.0
+
+[time_director]
+# quick / cinematic / deep. Duration scale multiplies all screen durations.
+mode = "cinematic"
+duration_scale = 1.0
+personal_seed_visual_duration_s = 12.0
+inflation_visual_duration_s = 38.0
+reheating_visual_duration_s = 28.0
+nucleosynthesis_visual_duration_s = 28.0
+recombination_visual_duration_s = 38.0
 
 [scale]
 # Size of the displayed comoving patch at a = 1.

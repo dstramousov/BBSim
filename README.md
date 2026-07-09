@@ -82,7 +82,8 @@ spectral_tilt = 0.965
 strength = 0.72
 duration = 0.68
 smoothing = 0.85
-visual_duration_s = 40.0
+# Legacy fallback; cinematic playback uses [time_director].
+visual_duration_s = 8.0
 
 [cosmology]
 h0_gyr_inv = 0.069
@@ -93,9 +94,19 @@ omega_r = 0.0001
 omega_k = 0.0
 
 [early_universe]
+# Legacy fallbacks; cinematic playback uses [time_director].
 reheating_visual_duration_s = 6.0
 nucleosynthesis_visual_duration_s = 6.0
 recombination_visual_duration_s = 7.0
+
+[time_director]
+mode = "cinematic" # quick / cinematic / deep
+duration_scale = 1.0
+personal_seed_visual_duration_s = 12.0
+inflation_visual_duration_s = 38.0
+reheating_visual_duration_s = 28.0
+nucleosynthesis_visual_duration_s = 28.0
+recombination_visual_duration_s = 38.0
 
 [scale]
 box_size_today_mpc = 1000.0
@@ -103,6 +114,10 @@ show_scale_overlay = true
 ```
 
 В UI эти параметры можно менять перед нажатием `BIG BANG`. Во время одного запуска `UniverseConfig` остаётся immutable: изменение полей на панели влияет только на новый run.
+
+`[time_director]` отвечает не за физику, а за режиссуру времени на экране: эпохи могут занимать сравнимое экранное время, хотя физически одна длится доли секунды, а другая сотни тысяч лет. Во время live-run справа показывается текущая шкала времени: например `1 сек экрана ≈ ... физического времени`. `duration_scale` умножает все экранные длительности и позволяет быстро получить quick/deep-поведение без изменения физики.
+
+Во время live-эволюции правая панель показывает короткую аннотацию текущей эпохи: что происходит, что меняется визуально и какая шкала времени используется. Тексты локальные и короткие, чтобы не зависеть от сети и не превращать UI в статью.
 
 `[scale]` задаёт человеческую линейку для отображаемого comoving-участка. Например `box_size_today_mpc = 1000.0` означает: весь центральный canvas — это кусок пространства, который при `a = 1` соответствовал бы 1000 Mpc. В ранних эпохах оверлей показывает физический размер этого же участка при текущем `a(t)`.
 
@@ -141,3 +156,13 @@ python -m compileall src tests
 pytest
 ruff check .
 ```
+
+## v0.0.17 -> v0.0.18
+
+- Добавлен `TimeDirector`: экранная длительность эпох теперь вынесена в конфиг и отделена от физического времени эпохи.
+- Добавлена секция `[time_director]` в `config/simulation.toml`: режим, общий множитель длительности и длительность каждого раннего этапа.
+- Live-аннотация справа теперь показывает короткое объяснение текущей эпохи, визуальный смысл происходящего и шкалу времени (`1 сек экрана ≈ ... физического времени`).
+- Добавлены локальные аннотации эпох для зерна, инфляции, разогрева, нуклеосинтеза и рекомбинации.
+- Центральная визуализация получила разные цветовые профили для ранних эпох: спокойное зерно/инфляция, горячий разогрев, охлаждение нуклеосинтеза и CMB-переход.
+- Stage-длительности теперь читаются через `TimeDirector`, при этом старые `visual_duration_s` остаются legacy fallback-ами.
+- Синхронизирована версия проекта до 0.0.18.

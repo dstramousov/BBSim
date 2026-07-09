@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from dataclasses import replace
+
 from bbsim.core.config import UniverseConfig
 from bbsim.core.context import create_run_context
 from bbsim.core.pipeline import create_default_pipeline
@@ -28,6 +30,10 @@ def test_default_pipeline_reaches_all_initial_checkpoints() -> None:
 
 def test_live_step_advances_inflation_without_fast_forwarding() -> None:
     config = UniverseConfig.default(player_seed_phrase="Dimas")
+    config = replace(
+        config,
+        time_director=replace(config.time_director, personal_seed_visual_duration_s=1.0),
+    )
     context = create_run_context(config=config, backend=NumpyBackend())
     pipeline = create_default_pipeline()
 
@@ -97,6 +103,10 @@ def test_default_inflation_visual_duration_is_observable_not_stuck() -> None:
 
 def test_live_pipeline_leaves_seed_stage_after_short_playback() -> None:
     config = UniverseConfig.default(player_seed_phrase="Dimas")
+    config = replace(
+        config,
+        time_director=replace(config.time_director, personal_seed_visual_duration_s=1.0),
+    )
     context = create_run_context(config=config, backend=NumpyBackend())
     pipeline = create_default_pipeline()
 

@@ -9,6 +9,7 @@ from bbsim.core.expansion import ExpansionEngine
 from bbsim.core.report import StageReport
 from bbsim.core.scale import sample_scale
 from bbsim.core.seed import SeedMetrics
+from bbsim.core.time_director import stage_screen_duration_s
 
 
 def _describe_seed(metrics: SeedMetrics) -> tuple[str, ...]:
@@ -79,8 +80,9 @@ class PersonalSeedStage:
         if self._target_field is None:
             raise RuntimeError("personal seed stage entered without a target field")
 
-        self._elapsed_s = min(self._visual_duration_s, self._elapsed_s + max(dt, 0.0))
-        progress = self._elapsed_s / self._visual_duration_s
+        duration = stage_screen_duration_s(context.config, self.stage_id, self._visual_duration_s)
+        self._elapsed_s = min(duration, self._elapsed_s + max(dt, 0.0))
+        progress = self._elapsed_s / duration
         reveal = _smoothstep(progress)
         displayed = (self._target_field * reveal).astype(np.float32)
 

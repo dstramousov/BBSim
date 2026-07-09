@@ -45,11 +45,24 @@ class SeedConfig:
 
 @dataclass(frozen=True, slots=True)
 class EarlyUniverseConfig:
-    """Visual timing and simple outputs for early live universe stages."""
+    """Simple outputs for early live universe stages."""
 
     reheating_visual_duration_s: float = 6.0
     nucleosynthesis_visual_duration_s: float = 6.0
     recombination_visual_duration_s: float = 7.0
+
+
+@dataclass(frozen=True, slots=True)
+class TimeDirectorConfig:
+    """Cinematic screen-time direction for epoch playback."""
+
+    mode: str = "cinematic"
+    duration_scale: float = 1.0
+    personal_seed_visual_duration_s: float = 12.0
+    inflation_visual_duration_s: float = 38.0
+    reheating_visual_duration_s: float = 28.0
+    nucleosynthesis_visual_duration_s: float = 28.0
+    recombination_visual_duration_s: float = 38.0
 
 
 @dataclass(frozen=True, slots=True)
@@ -82,6 +95,7 @@ class UniverseConfig:
     cosmology: CosmologyConfig
     inflation: InflationConfig
     early_universe: EarlyUniverseConfig
+    time_director: TimeDirectorConfig
     scale: ScaleConfig
     structure: StructureConfig
 
@@ -101,6 +115,7 @@ class UniverseConfig:
             cosmology=CosmologyConfig(),
             inflation=InflationConfig(),
             early_universe=EarlyUniverseConfig(),
+            time_director=TimeDirectorConfig(),
             scale=ScaleConfig(),
             structure=StructureConfig(),
         )

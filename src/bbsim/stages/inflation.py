@@ -10,6 +10,7 @@ from bbsim.core.context import UniverseRunContext
 from bbsim.core.expansion import ExpansionEngine
 from bbsim.core.report import StageReport
 from bbsim.core.scale import sample_scale
+from bbsim.core.time_director import stage_screen_duration_s
 
 
 class InflationStage:
@@ -39,7 +40,12 @@ class InflationStage:
     def step(self, context: UniverseRunContext, dt: float) -> None:
         """Advance the prototype inflation visual stage."""
 
-        duration = max(context.config.inflation.visual_duration_s, 1.0e-6)
+        duration = max(
+            stage_screen_duration_s(
+                context.config, self.stage_id, context.config.inflation.visual_duration_s
+            ),
+            1.0e-6,
+        )
         self._elapsed_s = min(duration, self._elapsed_s + max(dt, 0.0))
         progress = self._elapsed_s / duration
         params = context.config.inflation

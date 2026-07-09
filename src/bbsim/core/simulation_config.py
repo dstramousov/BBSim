@@ -15,6 +15,7 @@ from bbsim.core.config import (
     ScaleConfig,
     SeedConfig,
     StructureConfig,
+    TimeDirectorConfig,
     UniverseConfig,
 )
 
@@ -73,6 +74,9 @@ def _parse_simulation_config(raw: dict[str, Any], defaults: UniverseConfig) -> U
         inflation=_parse_inflation_config(raw.get("inflation", {}), defaults.inflation),
         early_universe=_parse_early_universe_config(
             raw.get("early_universe", {}), defaults.early_universe
+        ),
+        time_director=_parse_time_director_config(
+            raw.get("time_director", {}), defaults.time_director
         ),
         scale=_parse_scale_config(raw.get("scale", {}), defaults.scale),
         structure=_parse_structure_config(raw.get("structure", {}), defaults.structure),
@@ -175,6 +179,53 @@ def _parse_early_universe_config(raw: Any, defaults: EarlyUniverseConfig) -> Ear
         ),
     )
 
+
+
+def _parse_time_director_config(raw: Any, defaults: TimeDirectorConfig) -> TimeDirectorConfig:
+    if not isinstance(raw, dict):
+        return defaults
+
+    mode = raw.get("mode", defaults.mode)
+    if not isinstance(mode, str) or mode not in {"quick", "cinematic", "deep"}:
+        mode = defaults.mode
+
+    return replace(
+        defaults,
+        mode=mode,
+        duration_scale=_bounded_float(
+            raw.get("duration_scale"), defaults.duration_scale, minimum=0.1, maximum=10.0
+        ),
+        personal_seed_visual_duration_s=_bounded_float(
+            raw.get("personal_seed_visual_duration_s"),
+            defaults.personal_seed_visual_duration_s,
+            minimum=1.0,
+            maximum=600.0,
+        ),
+        inflation_visual_duration_s=_bounded_float(
+            raw.get("inflation_visual_duration_s"),
+            defaults.inflation_visual_duration_s,
+            minimum=1.0,
+            maximum=600.0,
+        ),
+        reheating_visual_duration_s=_bounded_float(
+            raw.get("reheating_visual_duration_s"),
+            defaults.reheating_visual_duration_s,
+            minimum=1.0,
+            maximum=600.0,
+        ),
+        nucleosynthesis_visual_duration_s=_bounded_float(
+            raw.get("nucleosynthesis_visual_duration_s"),
+            defaults.nucleosynthesis_visual_duration_s,
+            minimum=1.0,
+            maximum=600.0,
+        ),
+        recombination_visual_duration_s=_bounded_float(
+            raw.get("recombination_visual_duration_s"),
+            defaults.recombination_visual_duration_s,
+            minimum=1.0,
+            maximum=600.0,
+        ),
+    )
 
 
 def _parse_scale_config(raw: Any, defaults: ScaleConfig) -> ScaleConfig:

@@ -44,6 +44,15 @@ reheating_visual_duration_s = 4.0
 nucleosynthesis_visual_duration_s = 5.0
 recombination_visual_duration_s = 6.0
 
+[time_director]
+mode = "deep"
+duration_scale = 1.5
+personal_seed_visual_duration_s = 11.0
+inflation_visual_duration_s = 22.0
+reheating_visual_duration_s = 33.0
+nucleosynthesis_visual_duration_s = 44.0
+recombination_visual_duration_s = 55.0
+
 [scale]
 box_size_today_mpc = 500.0
 show_scale_overlay = false
@@ -71,6 +80,13 @@ show_scale_overlay = false
     assert config.early_universe.reheating_visual_duration_s == 4.0
     assert config.early_universe.nucleosynthesis_visual_duration_s == 5.0
     assert config.early_universe.recombination_visual_duration_s == 6.0
+    assert config.time_director.mode == "deep"
+    assert config.time_director.duration_scale == 1.5
+    assert config.time_director.personal_seed_visual_duration_s == 11.0
+    assert config.time_director.inflation_visual_duration_s == 22.0
+    assert config.time_director.reheating_visual_duration_s == 33.0
+    assert config.time_director.nucleosynthesis_visual_duration_s == 44.0
+    assert config.time_director.recombination_visual_duration_s == 55.0
     assert config.scale.box_size_today_mpc == 500.0
     assert config.scale.show_scale_overlay is False
 
@@ -114,6 +130,15 @@ reheating_visual_duration_s = 0
 nucleosynthesis_visual_duration_s = 999
 recombination_visual_duration_s = "slow"
 
+[time_director]
+mode = "turbo"
+duration_scale = 0
+personal_seed_visual_duration_s = 0
+inflation_visual_duration_s = 999
+reheating_visual_duration_s = "fast"
+nucleosynthesis_visual_duration_s = -1
+recombination_visual_duration_s = 999
+
 [scale]
 box_size_today_mpc = -4
 show_scale_overlay = "yes"
@@ -144,5 +169,15 @@ show_scale_overlay = "yes"
         config.early_universe.recombination_visual_duration_s
         == UniverseConfig.default().early_universe.recombination_visual_duration_s
     )
+    assert config.time_director.mode == UniverseConfig.default().time_director.mode
+    assert config.time_director.duration_scale == 0.1
+    assert config.time_director.personal_seed_visual_duration_s == 1.0
+    assert config.time_director.inflation_visual_duration_s == 600.0
+    assert (
+        config.time_director.reheating_visual_duration_s
+        == UniverseConfig.default().time_director.reheating_visual_duration_s
+    )
+    assert config.time_director.nucleosynthesis_visual_duration_s == 1.0
+    assert config.time_director.recombination_visual_duration_s == 600.0
     assert config.scale.box_size_today_mpc == 0.001
     assert config.scale.show_scale_overlay == UniverseConfig.default().scale.show_scale_overlay
