@@ -34,6 +34,7 @@ from bbsim.core.pipeline import UniversePipeline, create_default_pipeline
 from bbsim.numeric.numpy_backend import NumpyBackend
 from bbsim.core.scale import build_scale_overlay_lines
 from bbsim.core.time_director import sample_time_scale
+from bbsim.core.era_visual_composer import render_era_visual_frame
 from bbsim.core.visual_director import render_visual_frame
 from bbsim.ui.space_overlay import SpaceScaleOverlay
 from bbsim.ui.timeline_panel import TimelinePanel, TimelineViewState
@@ -814,16 +815,27 @@ class MainWindow(QMainWindow):
     def _show_current_field(self, stage_id: str | None) -> None:
         if self._context is None:
             return
-        selected = self._select_display_field(stage_id)
-        if selected is None:
-            return
-        field, visual_stage_id = selected
-        frame = render_visual_frame(
-            field.T,
-            stage_id=visual_stage_id,
-            progress=self._context.state.stage_progress,
-            config=self._context.config.visual_director,
-        )
+
+        layer = str(self._display_layer_combo.currentData() or "auto")
+        if layer == "auto":
+            frame = render_era_visual_frame(
+                self._context.fields,
+                stage_id=stage_id,
+                progress=self._context.state.stage_progress,
+                config=self._context.config.visual_director,
+            )
+        else:
+            selected = self._select_display_field(stage_id)
+            if selected is None:
+                return
+            field, visual_stage_id = selected
+            frame = render_visual_frame(
+                field.T,
+                stage_id=visual_stage_id,
+                progress=self._context.state.stage_progress,
+                config=self._context.config.visual_director,
+            )
+
         self._field_stack.setCurrentWidget(self._image_container)
         self._image.setImage(frame.rgb, autoRange=False, autoLevels=False)
         self._fit_field_to_canvas(frame.rgb.shape)
