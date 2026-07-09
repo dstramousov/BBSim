@@ -62,3 +62,6 @@ def test_reheating_and_nucleosynthesis_update_early_fields() -> None:
     assert context.fields.radiation.any()
     assert context.state.hydrogen_fraction > 0.7
     assert context.state.helium_fraction > 0.2
+    assert context.state.h_history
+    assert context.state.radiation_fraction_history
+    assert context.state.matter_fraction_history

@@ -7,6 +7,7 @@ import math
 import numpy as np
 
 from bbsim.core.context import UniverseRunContext
+from bbsim.core.expansion import ExpansionEngine
 from bbsim.core.report import StageReport
 
 
@@ -32,8 +33,7 @@ class InflationStage:
         self._initial_a = context.state.a
         self._initial_curvature = context.state.curvature
         self._target_delta = None
-        context.state.a_history.append(context.state.a)
-        context.state.t_history.append(context.state.t_gyr)
+        ExpansionEngine.update_state(context.state, context.config.cosmology, update_era=False)
 
     def step(self, context: UniverseRunContext, dt: float) -> None:
         """Advance the prototype inflation visual stage."""
@@ -49,8 +49,7 @@ class InflationStage:
             -params.smoothing * 10.0 * progress
         )
         context.state.stage_progress = progress
-        context.state.a_history.append(context.state.a)
-        context.state.t_history.append(context.state.t_gyr)
+        ExpansionEngine.update_state(context.state, context.config.cosmology, update_era=False)
 
         context.fields.inflation_delta = self._build_live_field(context, progress)
         context.fields.dark_density = 1.0 + context.fields.inflation_delta

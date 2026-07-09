@@ -5,7 +5,7 @@ from __future__ import annotations
 import numpy as np
 
 from bbsim.core.context import UniverseRunContext
-from bbsim.core.expansion import compute_hubble_gyr_inv, detect_era
+from bbsim.core.expansion import ExpansionEngine
 from bbsim.core.report import StageReport
 
 
@@ -47,8 +47,7 @@ class RecombinationPreviewStage:
         target = context.backend.apply_inflation_smoothing(imprint_source, smoothing=0.45)
         self._target_cmb = context.backend.normalize_field(target)
         context.fields.cmb = self._source.astype(np.float32, copy=True)
-        context.state.a_history.append(context.state.a)
-        context.state.t_history.append(context.state.t_gyr)
+        ExpansionEngine.update_state(context.state, context.config.cosmology)
 
     def step(self, context: UniverseRunContext, dt: float) -> None:
         """Advance the visible CMB transition over the stage duration."""
@@ -64,15 +63,12 @@ class RecombinationPreviewStage:
         target_a = 9.0e-4
         live_a = self._initial_a + (target_a - self._initial_a) * visible_progress
         context.state.a = max(self._initial_a, live_a)
-        context.state.h_gyr_inv = compute_hubble_gyr_inv(context.state.a, context.config.cosmology)
-        context.state.era = detect_era(context.state.a, context.config.cosmology)
         context.state.temperature_k = 1.0e9 + (3000.0 - 1.0e9) * visible_progress
         context.state.stage_progress = progress
 
         live_cmb = (1.0 - visible_progress) * self._source + visible_progress * self._target_cmb
         context.fields.cmb = context.backend.normalize_field(live_cmb)
-        context.state.a_history.append(context.state.a)
-        context.state.t_history.append(context.state.t_gyr)
+        ExpansionEngine.update_state(context.state, context.config.cosmology)
 
     def is_complete(self, context: UniverseRunContext) -> bool:
         """Return true after the CMB-like snapshot is complete."""
@@ -90,6 +86,9 @@ class RecombinationPreviewStage:
                 f"Эпоха: {context.state.era}",
                 f"Температура: {context.state.temperature_k:.0f} K",
                 f"H(a): {context.state.h_gyr_inv:.3e} 1/Gyr",
+                f"Доля radiation: {context.state.frac_r:.2f}",
+                f"Доля matter: {context.state.frac_m:.2f}",
+                f"Доля dark energy: {context.state.frac_lambda:.2f}",
                 f"Контраст CMB-like отпечатка: {cmb_contrast:.2f}",
                 "Горячая плазма стала прозрачной и сохранила рябь как CMB-like отпечаток.",
             ),

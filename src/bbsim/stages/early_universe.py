@@ -7,7 +7,7 @@ import math
 import numpy as np
 
 from bbsim.core.context import UniverseRunContext
-from bbsim.core.expansion import compute_hubble_gyr_inv, detect_era
+from bbsim.core.expansion import ExpansionEngine
 from bbsim.core.report import StageReport
 
 
@@ -59,8 +59,7 @@ class ReheatingStage:
         rolled = np.roll(self._source, 7, axis=0) - np.roll(self._source, -5, axis=1)
         self._thermal_pattern = context.backend.normalize_field(rolled)
         context.fields.radiation = self._source.astype(np.float32, copy=True)
-        context.state.a_history.append(context.state.a)
-        context.state.t_history.append(context.state.t_gyr)
+        ExpansionEngine.update_state(context.state, context.config.cosmology)
 
     def step(self, context: UniverseRunContext, dt: float) -> None:
         """Advance the visible hot plasma transition."""
@@ -84,11 +83,8 @@ class ReheatingStage:
         context.state.a = _log_lerp(self._initial_a, target_a, visible)
         context.state.t_gyr = _log_lerp(self._initial_t_gyr, 1.0e-18, visible)
         context.state.temperature_k = _log_lerp(1.0e15, 1.0e9, visible)
-        context.state.h_gyr_inv = compute_hubble_gyr_inv(context.state.a, context.config.cosmology)
-        context.state.era = detect_era(context.state.a, context.config.cosmology)
         context.state.stage_progress = progress
-        context.state.a_history.append(context.state.a)
-        context.state.t_history.append(context.state.t_gyr)
+        ExpansionEngine.update_state(context.state, context.config.cosmology)
 
     def is_complete(self, context: UniverseRunContext) -> bool:
         """Return true when reheating reaches its checkpoint."""
@@ -107,6 +103,9 @@ class ReheatingStage:
                 f"Температура: {context.state.temperature_k:.2e} K",
                 f"Масштаб a(t): {context.state.a:.3e}",
                 f"Эпоха по плотностям: {context.state.era}",
+                f"Доля radiation: {context.state.frac_r:.2f}",
+                f"Доля matter: {context.state.frac_m:.2f}",
+                f"Доля dark energy: {context.state.frac_lambda:.2f}",
                 f"Контраст горячей плазмы: {radiation_contrast:.2f}",
                 "Рост структуры пока подавлен: радиация держит обычную материю в горячем супе.",
             ),
@@ -146,8 +145,7 @@ class NucleosynthesisStage:
             source = _source_after_inflation(context)
         self._source = context.backend.normalize_field(source)
         self._target = context.backend.normalize_field(context.backend.diffuse(self._source, amount=0.82))
-        context.state.a_history.append(context.state.a)
-        context.state.t_history.append(context.state.t_gyr)
+        ExpansionEngine.update_state(context.state, context.config.cosmology)
 
     def step(self, context: UniverseRunContext, dt: float) -> None:
         """Advance cooling plasma and light-element fractions."""
@@ -168,16 +166,13 @@ class NucleosynthesisStage:
         context.state.a = _log_lerp(self._initial_a, target_a, visible)
         context.state.t_gyr = _log_lerp(self._initial_t_gyr, 6.0e-15, visible)
         context.state.temperature_k = _log_lerp(1.0e9, 1.0e8, visible)
-        context.state.h_gyr_inv = compute_hubble_gyr_inv(context.state.a, context.config.cosmology)
-        context.state.era = detect_era(context.state.a, context.config.cosmology)
         context.state.stage_progress = progress
 
         context.state.hydrogen_fraction = 0.75 * visible
         context.state.helium_fraction = 0.25 * visible
         context.state.lithium_trace = 1.0e-9 * visible
         context.state.heavy_elements_fraction = 0.0
-        context.state.a_history.append(context.state.a)
-        context.state.t_history.append(context.state.t_gyr)
+        ExpansionEngine.update_state(context.state, context.config.cosmology)
 
     def is_complete(self, context: UniverseRunContext) -> bool:
         """Return true when light-element fractions are stable."""
@@ -197,6 +192,9 @@ class NucleosynthesisStage:
                 f"Следы лития: {context.state.lithium_trace:.1e}",
                 "Тяжёлые элементы: почти 0 — они появятся только в звёздах.",
                 f"Температура: {context.state.temperature_k:.2e} K",
+                f"Доминирующий компонент: {context.state.era}",
+                f"Доля radiation: {context.state.frac_r:.2f}",
+                f"Доля matter: {context.state.frac_m:.2f}",
                 "Будущие звёзды получили основное топливо: водород.",
             ),
             metrics={

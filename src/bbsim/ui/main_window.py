@@ -165,14 +165,41 @@ class MainWindow(QMainWindow):
             "border: 1px solid #24262c;"
             "}"
         )
-        self._plot = pg.PlotWidget(title="log10 a(t)")
-        self._plot.showGrid(x=True, y=True, alpha=0.25)
-        self._plot.setLabel("left", "log10 scale factor a")
-        self._plot.setLabel("bottom", "sample")
+        self._scale_plot = pg.PlotWidget(title="log10 a(t)")
+        self._scale_plot.showGrid(x=True, y=True, alpha=0.25)
+        self._scale_plot.setLabel("left", "log10 a")
+        self._scale_plot.setLabel("bottom", "sample")
+
+        self._components_plot = pg.PlotWidget(title="Компоненты плотности")
+        self._components_plot.showGrid(x=True, y=True, alpha=0.25)
+        self._components_plot.setLabel("left", "fraction")
+        self._components_plot.setLabel("bottom", "sample")
+        self._components_plot.setYRange(0.0, 1.0)
+        self._components_plot.addLegend(offset=(10, 10))
+
+        self._plot_panel = QWidget()
+        plot_panel_layout = QVBoxLayout(self._plot_panel)
+        plot_panel_layout.setContentsMargins(0, 0, 0, 0)
+        plot_panel_layout.addWidget(self._scale_plot, stretch=1)
+        plot_panel_layout.addWidget(self._components_plot, stretch=1)
+
+        self._scale_curve = self._scale_plot.plot([], [], pen=pg.mkPen(width=2))
+        self._radiation_curve = self._components_plot.plot(
+            [], [], pen=pg.mkPen("#66d9ff", width=2), name="radiation"
+        )
+        self._matter_curve = self._components_plot.plot(
+            [], [], pen=pg.mkPen("#f0c36d", width=2), name="matter"
+        )
+        self._dark_energy_curve = self._components_plot.plot(
+            [], [], pen=pg.mkPen("#b48cff", width=2), name="dark energy"
+        )
+        self._curvature_curve = self._components_plot.plot(
+            [], [], pen=pg.mkPen("#aaaaaa", width=1), name="curvature"
+        )
 
         self._plot_stack = QStackedWidget()
         self._plot_stack.addWidget(self._plot_placeholder)
-        self._plot_stack.addWidget(self._plot)
+        self._plot_stack.addWidget(self._plot_panel)
 
         self._parameter_widgets: tuple[QWidget, ...] = (
             self._phrase_edit,
@@ -278,7 +305,7 @@ class MainWindow(QMainWindow):
         self._set_parameter_inputs_enabled(True)
         self._field_stack.setCurrentWidget(self._field_placeholder)
         self._plot_stack.setCurrentWidget(self._plot_placeholder)
-        self._plot.clear()
+        self._clear_plot_data()
         self._timeline_panel.set_timeline_state(TimelineViewState())
         self._report.setPlainText(
             "Ожидание BIG BANG\n\n"
@@ -305,9 +332,9 @@ class MainWindow(QMainWindow):
         self._pipeline = create_default_pipeline()
         self._pipeline_finished_reported = False
         self._report.clear()
-        self._plot.clear()
+        self._clear_plot_data()
         self._field_stack.setCurrentWidget(self._image)
-        self._plot_stack.setCurrentWidget(self._plot)
+        self._plot_stack.setCurrentWidget(self._plot_panel)
         self._timeline_panel.set_timeline_state(TimelineViewState())
         self._set_parameter_inputs_enabled(False)
         self._run_state = _RUN_RUNNING
@@ -440,16 +467,47 @@ class MainWindow(QMainWindow):
         if self._context is None:
             self._plot_stack.setCurrentWidget(self._plot_placeholder)
             return
-        values = np.asarray(self._context.state.a_history, dtype=float)
-        self._plot.clear()
-        positive_values = values[values > 0.0]
-        if positive_values.size:
-            self._plot_stack.setCurrentWidget(self._plot)
-            self._plot.plot(
-                np.arange(positive_values.size),
-                np.log10(positive_values),
-                pen=pg.mkPen(width=2),
-            )
+
+        state = self._context.state
+        scale_values = np.asarray(state.a_history, dtype=float)
+        positive_values = scale_values[scale_values > 0.0]
+
+        if not positive_values.size:
+            self._clear_plot_data()
+            self._plot_stack.setCurrentWidget(self._plot_placeholder)
+            return
+
+        self._plot_stack.setCurrentWidget(self._plot_panel)
+        scale_x = np.arange(positive_values.size)
+        self._scale_curve.setData(scale_x, np.log10(positive_values))
+
+        radiation = np.asarray(state.radiation_fraction_history, dtype=float)
+        matter = np.asarray(state.matter_fraction_history, dtype=float)
+        dark_energy = np.asarray(state.dark_energy_fraction_history, dtype=float)
+        curvature = np.asarray(state.curvature_fraction_history, dtype=float)
+        sample_count = min(radiation.size, matter.size, dark_energy.size, curvature.size)
+        if sample_count <= 0:
+            self._radiation_curve.setData([], [])
+            self._matter_curve.setData([], [])
+            self._dark_energy_curve.setData([], [])
+            self._curvature_curve.setData([], [])
+            return
+
+        x_values = np.arange(sample_count)
+        self._radiation_curve.setData(x_values, radiation[-sample_count:])
+        self._matter_curve.setData(x_values, matter[-sample_count:])
+        self._dark_energy_curve.setData(x_values, dark_energy[-sample_count:])
+        if np.max(curvature[-sample_count:]) > 0.02:
+            self._curvature_curve.setData(x_values, curvature[-sample_count:])
+        else:
+            self._curvature_curve.setData([], [])
+
+    def _clear_plot_data(self) -> None:
+        self._scale_curve.setData([], [])
+        self._radiation_curve.setData([], [])
+        self._matter_curve.setData([], [])
+        self._dark_energy_curve.setData([], [])
+        self._curvature_curve.setData([], [])
 
     @staticmethod
     def _create_int_spin(minimum: int, maximum: int, value: int, step: int) -> QSpinBox:

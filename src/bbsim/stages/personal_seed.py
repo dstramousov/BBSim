@@ -5,6 +5,7 @@ from __future__ import annotations
 import numpy as np
 
 from bbsim.core.context import UniverseRunContext
+from bbsim.core.expansion import ExpansionEngine
 from bbsim.core.report import StageReport
 from bbsim.core.seed import SeedMetrics
 
@@ -69,6 +70,7 @@ class PersonalSeedStage:
         context.fields.seed_delta = np.zeros_like(self._target_field, dtype=np.float32)
         context.fields.dark_density = np.ones_like(self._target_field, dtype=np.float32)
         context.fields.baryon_density = np.ones_like(self._target_field, dtype=np.float32)
+        ExpansionEngine.update_state(context.state, context.config.cosmology, update_era=False)
 
     def step(self, context: UniverseRunContext, dt: float) -> None:
         """Reveal the seed field over a short visual interval."""
@@ -93,6 +95,8 @@ class PersonalSeedStage:
                 context.fields.seed_delta,
                 amount=0.65,
             )
+
+        ExpansionEngine.update_state(context.state, context.config.cosmology, update_era=False)
 
     def is_complete(self, context: UniverseRunContext) -> bool:
         """Return true after the seed reveal completes."""
