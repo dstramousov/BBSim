@@ -36,9 +36,14 @@ def test_visual_director_supports_dark_age_matter_profiles() -> None:
     dark = render_visual_frame(field, stage_id="dark_matter", progress=0.7, config=config)
     gas = render_visual_frame(field, stage_id="baryon_gas", progress=0.7, config=config)
     mixed = render_visual_frame(field, stage_id="dark_ages", progress=0.7, config=config)
+    potential = render_visual_frame(field, stage_id="gravitational_potential", progress=0.7, config=config)
+    halos = render_visual_frame(field, stage_id="halo_candidates", progress=0.7, config=config)
 
     assert dark.profile_id == "dark_matter"
     assert gas.profile_id == "baryon_gas"
     assert mixed.profile_id == "dark_ages"
-    assert dark.rgb.shape == gas.rgb.shape == mixed.rgb.shape == (6, 6, 3)
+    assert potential.profile_id == "gravitational_potential"
+    assert halos.profile_id == "halo_candidates"
+    assert dark.rgb.shape == gas.rgb.shape == mixed.rgb.shape == potential.rgb.shape == halos.rgb.shape
     assert not np.allclose(dark.rgb, gas.rgb)
+    assert not np.allclose(potential.rgb, halos.rgb)

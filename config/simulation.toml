@@ -64,3 +64,8 @@ star_formation_efficiency = 0.45
 feedback_strength = 0.40
 metal_yield = 0.25
 black_hole_efficiency = 0.15
+
+# v0.0.21: these existing structure knobs now affect dark-age growth too:
+# gravity_strength amplifies hidden halos/filaments,
+# baryon_infall controls how strongly gas follows the scaffold,
+# gas_pressure keeps gas smoother and visually delayed.

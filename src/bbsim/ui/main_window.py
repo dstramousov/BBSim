@@ -197,6 +197,8 @@ class MainWindow(QMainWindow):
         self._display_layer_combo.addItem("Авто по эпохе", "auto")
         self._display_layer_combo.addItem("CMB / реликтовый отпечаток", "cmb")
         self._display_layer_combo.addItem("Тёмная материя", "dark_density")
+        self._display_layer_combo.addItem("Гравитационный каркас", "gravitational_potential")
+        self._display_layer_combo.addItem("Будущие гало / звёздные узлы", "future_star_sites")
         self._display_layer_combo.addItem("Обычная материя / газ", "baryon_density")
         self._display_layer_combo.addItem("Смешанный вид", "mixed_matter")
         self._stage_label = QLabel("Состояние: ожидание параметров")
@@ -573,6 +575,18 @@ class MainWindow(QMainWindow):
         lines.extend(f"• {bullet}" for bullet in note.bullets)
         lines.append("")
         lines.append(f"Визуально: {note.visual_hint}.")
+        if stage_id == "dark_ages":
+            lines.extend(
+                (
+                    "",
+                    "Структура:",
+                    f"• контраст тёмного каркаса: {self._context.state.dark_matter_contrast:.2f}",
+                    f"• контраст газа: {self._context.state.baryon_contrast:.2f}",
+                    f"• задержка газа: {self._context.state.gas_lag:.2f}",
+                    f"• кандидатов будущих гало: {self._context.state.halo_count}",
+                    f"• будущих звёздных узлов: {self._context.state.future_star_site_count}",
+                )
+            )
         if time_sample is not None:
             lines.extend(
                 (
@@ -596,6 +610,12 @@ class MainWindow(QMainWindow):
             return fields.cmb, "recombination"
         if layer == "dark_density" and self._has_field_signal(fields.dark_density):
             return fields.dark_density, "dark_matter"
+        if layer == "gravitational_potential" and self._has_field_signal(fields.gravitational_potential):
+            return fields.gravitational_potential, "gravitational_potential"
+        if layer == "future_star_sites" and self._has_field_signal(fields.future_star_sites):
+            return fields.future_star_sites, "halo_candidates"
+        if layer == "future_star_sites" and self._has_field_signal(fields.halo_density):
+            return fields.halo_density, "halo_candidates"
         if layer == "baryon_density" and self._has_field_signal(fields.baryon_density):
             return fields.baryon_density, "baryon_gas"
         if layer == "mixed_matter":
@@ -607,6 +627,8 @@ class MainWindow(QMainWindow):
             mixed = self._mixed_matter_field()
             if mixed is not None:
                 return mixed, "dark_ages"
+            if self._has_field_signal(fields.halo_density):
+                return fields.halo_density, "dark_ages"
             if self._has_field_signal(fields.dark_density):
                 return fields.dark_density, "dark_ages"
         if stage_id == "recombination" and self._has_field_signal(fields.cmb):
@@ -630,7 +652,11 @@ class MainWindow(QMainWindow):
             baryon = self._normalize_for_display(fields.baryon_density)
         else:
             baryon = np.zeros_like(dark)
-        return (0.68 * dark + 0.32 * baryon).astype(np.float32)
+        if self._has_field_signal(fields.halo_density):
+            halo = self._normalize_for_display(fields.halo_density)
+        else:
+            halo = np.zeros_like(dark)
+        return (0.58 * dark + 0.28 * baryon + 0.14 * halo).astype(np.float32)
 
     @staticmethod
     def _has_field_signal(field: np.ndarray) -> bool:

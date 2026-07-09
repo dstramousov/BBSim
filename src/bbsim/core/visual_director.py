@@ -43,6 +43,8 @@ _STAGE_PROFILE: dict[str, str] = {
     "dark_matter": "dark_matter",
     "baryon_gas": "baryon_gas",
     "mixed_matter": "mixed_matter",
+    "gravitational_potential": "gravitational_potential",
+    "halo_candidates": "halo_candidates",
 }
 
 _PALETTES: dict[str, tuple[tuple[float, tuple[float, float, float]], ...]] = {
@@ -108,6 +110,20 @@ _PALETTES: dict[str, tuple[tuple[float, tuple[float, float, float]], ...]] = {
         (0.50, (0.070, 0.105, 0.210)),
         (0.74, (0.250, 0.330, 0.490)),
         (1.00, (0.760, 0.835, 0.855)),
+    ),
+    "gravitational_potential": (
+        (0.00, (0.002, 0.003, 0.014)),
+        (0.26, (0.016, 0.020, 0.060)),
+        (0.52, (0.060, 0.080, 0.165)),
+        (0.78, (0.190, 0.260, 0.420)),
+        (1.00, (0.660, 0.740, 0.880)),
+    ),
+    "halo_candidates": (
+        (0.00, (0.003, 0.002, 0.012)),
+        (0.22, (0.035, 0.018, 0.070)),
+        (0.50, (0.190, 0.065, 0.260)),
+        (0.76, (0.660, 0.270, 0.580)),
+        (1.00, (1.000, 0.790, 0.960)),
     ),
 }
 
@@ -216,6 +232,10 @@ def _apply_stage_energy(
         return np.clip(np.power(clamped, 1.20) * 0.86 + 0.05, 0.0, 1.0)
     if stage_id == "mixed_matter":
         return np.clip(np.power(clamped, 0.85), 0.0, 1.0)
+    if stage_id == "gravitational_potential":
+        return np.clip(np.power(clamped, 0.74), 0.0, 1.0)
+    if stage_id == "halo_candidates":
+        return np.clip(np.power(clamped, 0.42), 0.0, 1.0)
     return clamped
 
 
@@ -253,9 +273,12 @@ def _apply_epoch_glow(
     if stage_id == "recombination":
         haze = (1.0 - p) * 0.13
         return _lerp(rgb + haze, rgb, p)
-    if stage_id in {"dark_ages", "dark_matter", "mixed_matter"}:
+    if stage_id in {"dark_ages", "dark_matter", "mixed_matter", "gravitational_potential"}:
         filament = _filament_sheen(values, progress)
         return rgb + filament[..., None] * np.array([0.18, 0.20, 0.34], dtype=np.float32)
+    if stage_id == "halo_candidates":
+        sparkle = (values[..., None] ** 3) * (0.14 + 0.10 * p)
+        return rgb + sparkle * np.array([0.95, 0.52, 0.85], dtype=np.float32)
     if stage_id == "baryon_gas":
         gas_glow = (values[..., None] ** 2) * 0.055
         return rgb + gas_glow * np.array([0.14, 0.26, 0.22], dtype=np.float32)

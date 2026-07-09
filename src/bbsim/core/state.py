@@ -32,6 +32,12 @@ class UniverseState:
     helium_fraction: float = 0.0
     lithium_trace: float = 0.0
     heavy_elements_fraction: float = 0.0
+    dark_matter_contrast: float = 0.0
+    baryon_contrast: float = 0.0
+    gas_lag: float = 0.0
+    halo_count: int = 0
+    halo_mass_fraction: float = 0.0
+    future_star_site_count: int = 0
     a_history: list[float] = field(default_factory=list)
     t_history: list[float] = field(default_factory=list)
     h_history: list[float] = field(default_factory=list)
@@ -42,4 +48,8 @@ class UniverseState:
     dark_energy_fraction_history: list[float] = field(default_factory=list)
     ionization_fraction_history: list[float] = field(default_factory=list)
     opacity_history: list[float] = field(default_factory=list)
+    dark_matter_contrast_history: list[float] = field(default_factory=list)
+    baryon_contrast_history: list[float] = field(default_factory=list)
+    halo_count_history: list[int] = field(default_factory=list)
+    gas_lag_history: list[float] = field(default_factory=list)
     era_history: list[str] = field(default_factory=list)

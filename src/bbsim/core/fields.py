@@ -12,7 +12,8 @@ class UniverseFields:
     """Mutable numeric fields for one universe run.
 
     Arrays are stored as float32 to reduce memory use and make a future C++ backend
-    easier to match.
+    easier to match. Some fields are physical-ish densities; others are visual or
+    gameplay diagnostic layers that explain why later objects appear where they do.
     """
 
     seed_delta: np.ndarray
@@ -21,6 +22,9 @@ class UniverseFields:
     baryon_density: np.ndarray
     radiation: np.ndarray
     cmb: np.ndarray
+    gravitational_potential: np.ndarray
+    halo_density: np.ndarray
+    future_star_sites: np.ndarray
     stars: np.ndarray
     metals: np.ndarray
     black_holes: np.ndarray
@@ -46,6 +50,9 @@ def create_empty_fields(grid_size: int) -> UniverseFields:
         baryon_density=zero.copy(),
         radiation=zero.copy(),
         cmb=zero.copy(),
+        gravitational_potential=zero.copy(),
+        halo_density=zero.copy(),
+        future_star_sites=zero.copy(),
         stars=zero.copy(),
         metals=zero.copy(),
         black_holes=zero.copy(),
