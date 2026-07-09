@@ -25,6 +25,7 @@ def test_default_pipeline_reaches_all_initial_checkpoints() -> None:
         "reheating",
         "nucleosynthesis",
         "recombination",
+        "dark_ages",
     ]
 
 
@@ -60,6 +61,9 @@ def test_reheating_and_nucleosynthesis_update_early_fields() -> None:
 
     while not pipeline.is_finished:
         pipeline.step_to_checkpoint(context)
+        report = context.history.reports[-1]
+        if report.stage_id == "nucleosynthesis":
+            break
         pipeline.advance(context)
 
     reports = {report.stage_id: report for report in context.history.reports}
@@ -122,3 +126,24 @@ def test_live_pipeline_leaves_seed_stage_after_short_playback() -> None:
 
     pipeline.step_live(context, dt=0.033)
     assert context.state.current_stage == "inflation"
+
+
+def test_dark_ages_separates_dark_matter_and_baryon_gas() -> None:
+    config = UniverseConfig.default(player_seed_phrase="Dimas")
+    context = create_run_context(config=config, backend=NumpyBackend())
+    pipeline = create_default_pipeline()
+
+    while not pipeline.is_finished:
+        pipeline.step_to_checkpoint(context)
+        report = context.history.reports[-1]
+        if report.stage_id == "dark_ages":
+            break
+        pipeline.advance(context)
+
+    assert context.state.current_stage == "dark_ages"
+    assert context.state.t_gyr >= 0.17
+    assert context.state.temperature_k <= 80.0
+    assert context.fields.dark_density.any()
+    assert context.fields.baryon_density.any()
+    assert float(context.fields.dark_density.std()) > float(context.fields.baryon_density.std())
+    assert "dark_baryon_correlation" in context.history.reports[-1].metrics

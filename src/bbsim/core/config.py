@@ -63,6 +63,7 @@ class TimeDirectorConfig:
     reheating_visual_duration_s: float = 28.0
     nucleosynthesis_visual_duration_s: float = 28.0
     recombination_visual_duration_s: float = 38.0
+    dark_ages_visual_duration_s: float = 48.0
 
 
 @dataclass(frozen=True, slots=True)
@@ -71,6 +72,16 @@ class ScaleConfig:
 
     box_size_today_mpc: float = 1000.0
     show_scale_overlay: bool = True
+
+
+@dataclass(frozen=True, slots=True)
+class VisualDirectorConfig:
+    """Tunable visual direction parameters for live epoch rendering."""
+
+    epoch_transition_fraction: float = 0.18
+    inflation_zoom_strength: float = 1.55
+    reheating_pulse_strength: float = 0.14
+    recombination_clearing_strength: float = 0.36
 
 
 @dataclass(frozen=True, slots=True)
@@ -97,6 +108,7 @@ class UniverseConfig:
     early_universe: EarlyUniverseConfig
     time_director: TimeDirectorConfig
     scale: ScaleConfig
+    visual_director: VisualDirectorConfig
     structure: StructureConfig
 
     @staticmethod
@@ -117,5 +129,6 @@ class UniverseConfig:
             early_universe=EarlyUniverseConfig(),
             time_director=TimeDirectorConfig(),
             scale=ScaleConfig(),
+            visual_director=VisualDirectorConfig(),
             structure=StructureConfig(),
         )

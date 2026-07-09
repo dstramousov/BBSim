@@ -7,6 +7,7 @@ import pyqtgraph as pg
 from PySide6.QtCore import Qt, QTimer
 from PySide6.QtWidgets import (
     QCheckBox,
+    QComboBox,
     QDoubleSpinBox,
     QFormLayout,
     QGridLayout,
@@ -33,7 +34,7 @@ from bbsim.core.pipeline import UniversePipeline, create_default_pipeline
 from bbsim.numeric.numpy_backend import NumpyBackend
 from bbsim.core.scale import build_scale_overlay_lines
 from bbsim.core.time_director import sample_time_scale
-from bbsim.render.field_renderer import field_to_display
+from bbsim.core.visual_director import render_visual_frame
 from bbsim.ui.space_overlay import SpaceScaleOverlay
 from bbsim.ui.timeline_panel import TimelinePanel, TimelineViewState
 
@@ -192,6 +193,12 @@ class MainWindow(QMainWindow):
         self._main_button.setMinimumHeight(42)
         self._pause_on_epochs_check = QCheckBox("Останавливаться на эпохах")
         self._pause_on_epochs_check.setChecked(self._app_config.timeline.pause_on_epochs)
+        self._display_layer_combo = QComboBox()
+        self._display_layer_combo.addItem("Авто по эпохе", "auto")
+        self._display_layer_combo.addItem("CMB / реликтовый отпечаток", "cmb")
+        self._display_layer_combo.addItem("Тёмная материя", "dark_density")
+        self._display_layer_combo.addItem("Обычная материя / газ", "baryon_density")
+        self._display_layer_combo.addItem("Смешанный вид", "mixed_matter")
         self._stage_label = QLabel("Состояние: ожидание параметров")
         self._timeline_panel = TimelinePanel()
         self._report = QTextEdit()
@@ -218,15 +225,9 @@ class MainWindow(QMainWindow):
         self._image.ui.roiBtn.hide()
         self._image.ui.menuBtn.hide()
         self._image.ui.histogram.hide()
-        self._stage_colormaps = {
-            "personal_seed": _create_seed_colormap(),
-            "inflation": _create_seed_colormap(),
-            "reheating": _create_hot_plasma_colormap(),
-            "nucleosynthesis": _create_cooling_colormap(),
-            "recombination": _create_cmb_colormap(),
-        }
-        self._current_colormap_stage: str | None = None
-        self._image.setColorMap(self._stage_colormaps["personal_seed"])
+        # RGB frames are produced by VisualDirector. The legacy pyqtgraph
+        # colormaps remain available above for future debugging, but runtime
+        # rendering now uses smooth palette transitions across epoch borders.
         self._image.getView().setDefaultPadding(0.0)
         self._image.getView().setMouseEnabled(x=False, y=False)
         self._image.getView().setAspectLocked(not self._field_fill_canvas)
@@ -329,6 +330,7 @@ class MainWindow(QMainWindow):
         self._timer.timeout.connect(self._tick_simulation)
 
         self._main_button.clicked.connect(self._handle_main_button)
+        self._display_layer_combo.currentIndexChanged.connect(lambda _index: self._redraw_current_field())
 
         self.setCentralWidget(self._build_layout())
         self._show_idle_state()
@@ -362,6 +364,7 @@ class MainWindow(QMainWindow):
         layout.addWidget(self._create_seed_group())
         layout.addWidget(self._create_inflation_group())
         layout.addWidget(self._create_cosmology_group())
+        layout.addWidget(self._create_display_group())
         layout.addWidget(self._pause_on_epochs_check)
         layout.addWidget(self._main_button)
         layout.addWidget(self._stage_label)
@@ -400,6 +403,12 @@ class MainWindow(QMainWindow):
         form.addRow("Космический разгон ΩΛ", self._omega_lambda_spin)
         form.addRow("Горячее излучение Ωr", self._omega_r_spin)
         form.addRow("Кривизна Ωk", self._omega_k_spin)
+        return group
+
+    def _create_display_group(self) -> QGroupBox:
+        group = QGroupBox("Отображение")
+        form = QFormLayout(group)
+        form.addRow("Слой поля", self._display_layer_combo)
         return group
 
     def _show_idle_state(self) -> None:
@@ -497,6 +506,7 @@ class MainWindow(QMainWindow):
             early_universe=self._base_config.early_universe,
             time_director=self._base_config.time_director,
             scale=self._base_config.scale,
+            visual_director=self._base_config.visual_director,
             structure=self._base_config.structure,
         )
 
@@ -576,59 +586,87 @@ class MainWindow(QMainWindow):
             )
         self._report.setPlainText("\n".join(lines))
 
-    def _apply_stage_colormap(self, stage_id: str | None) -> None:
-        key = stage_id if stage_id in self._stage_colormaps else "personal_seed"
-        if self._current_colormap_stage == key:
-            return
-        self._image.setColorMap(self._stage_colormaps[key])
-        self._current_colormap_stage = key
+    def _select_display_field(self, stage_id: str | None) -> tuple[np.ndarray, str | None] | None:
+        if self._context is None:
+            return None
+        fields = self._context.fields
+        layer = str(self._display_layer_combo.currentData() or "auto")
+
+        if layer == "cmb" and self._has_field_signal(fields.cmb):
+            return fields.cmb, "recombination"
+        if layer == "dark_density" and self._has_field_signal(fields.dark_density):
+            return fields.dark_density, "dark_matter"
+        if layer == "baryon_density" and self._has_field_signal(fields.baryon_density):
+            return fields.baryon_density, "baryon_gas"
+        if layer == "mixed_matter":
+            mixed = self._mixed_matter_field()
+            if mixed is not None:
+                return mixed, "mixed_matter"
+
+        if stage_id == "dark_ages":
+            mixed = self._mixed_matter_field()
+            if mixed is not None:
+                return mixed, "dark_ages"
+            if self._has_field_signal(fields.dark_density):
+                return fields.dark_density, "dark_ages"
+        if stage_id == "recombination" and self._has_field_signal(fields.cmb):
+            return fields.cmb, stage_id
+        if stage_id in {"reheating", "nucleosynthesis"} and self._has_field_signal(fields.radiation):
+            return fields.radiation, stage_id
+        if stage_id == "inflation" and self._has_field_signal(fields.inflation_delta):
+            return fields.inflation_delta, stage_id
+        if self._has_field_signal(fields.seed_delta):
+            return fields.seed_delta, stage_id
+        return None
+
+    def _mixed_matter_field(self) -> np.ndarray | None:
+        if self._context is None:
+            return None
+        fields = self._context.fields
+        if not self._has_field_signal(fields.dark_density):
+            return None
+        dark = self._normalize_for_display(fields.dark_density)
+        if self._has_field_signal(fields.baryon_density):
+            baryon = self._normalize_for_display(fields.baryon_density)
+        else:
+            baryon = np.zeros_like(dark)
+        return (0.68 * dark + 0.32 * baryon).astype(np.float32)
 
     @staticmethod
-    def _apply_stage_visual_profile(
-        display: np.ndarray,
-        stage_id: str | None,
-        progress: float,
-    ) -> np.ndarray:
-        clamped = np.clip(display, 0.0, 1.0)
-        if stage_id == "reheating":
-            pulse = 0.10 * np.sin(progress * np.pi * 6.0)
-            return np.clip(np.power(clamped, 0.62) + pulse, 0.0, 1.0)
-        if stage_id == "nucleosynthesis":
-            cooling = _smooth_visual_progress(progress)
-            return np.clip((1.0 - 0.18 * cooling) * clamped + 0.08 * (1.0 - cooling), 0.0, 1.0)
-        if stage_id == "recombination":
-            clearing = _smooth_visual_progress(progress)
-            return np.clip((0.72 + 0.28 * clearing) * clamped, 0.0, 1.0)
-        return clamped
+    def _has_field_signal(field: np.ndarray) -> bool:
+        data = np.asarray(field)
+        return bool(data.size and float(np.nanstd(data)) > 1.0e-7)
+
+    @staticmethod
+    def _normalize_for_display(field: np.ndarray) -> np.ndarray:
+        data = np.asarray(field, dtype=np.float32)
+        mean = float(np.nanmean(data))
+        std = float(np.nanstd(data))
+        if std <= 1.0e-8:
+            return np.zeros_like(data, dtype=np.float32)
+        return ((data - mean) / std).astype(np.float32)
+
+    def _redraw_current_field(self) -> None:
+        if self._context is None:
+            return
+        self._show_current_field(self._context.state.current_stage)
 
     def _show_current_field(self, stage_id: str | None) -> None:
         if self._context is None:
             return
-        fields = self._context.fields
-        if stage_id == "recombination" and np.any(fields.cmb):
-            field = fields.cmb
-        elif stage_id in {"reheating", "nucleosynthesis"} and np.any(fields.radiation):
-            field = fields.radiation
-        elif stage_id == "inflation" and np.any(fields.inflation_delta):
-            field = fields.inflation_delta
-        elif np.any(fields.seed_delta):
-            field = fields.seed_delta
-        else:
+        selected = self._select_display_field(stage_id)
+        if selected is None:
             return
-        display = field_to_display(field).T
-        self._apply_stage_colormap(stage_id)
-        display = self._apply_stage_visual_profile(
-            display, stage_id, self._context.state.stage_progress
+        field, visual_stage_id = selected
+        frame = render_visual_frame(
+            field.T,
+            stage_id=visual_stage_id,
+            progress=self._context.state.stage_progress,
+            config=self._context.config.visual_director,
         )
-        if stage_id == "personal_seed":
-            display = np.clip(
-                display * _seed_reveal_visibility(self._context.state.stage_progress),
-                0.0,
-                1.0,
-            )
         self._field_stack.setCurrentWidget(self._image_container)
-        self._image.setImage(display, levels=(0.0, 1.0), autoRange=False)
-        self._fit_field_to_canvas(display.shape)
+        self._image.setImage(frame.rgb, autoRange=False, autoLevels=False)
+        self._fit_field_to_canvas(frame.rgb.shape)
         self._update_scale_overlay(stage_id)
 
     def _fit_field_to_canvas(self, image_shape: tuple[int, ...]) -> None:

@@ -17,6 +17,7 @@ from bbsim.core.config import (
     StructureConfig,
     TimeDirectorConfig,
     UniverseConfig,
+    VisualDirectorConfig,
 )
 
 
@@ -79,6 +80,9 @@ def _parse_simulation_config(raw: dict[str, Any], defaults: UniverseConfig) -> U
             raw.get("time_director", {}), defaults.time_director
         ),
         scale=_parse_scale_config(raw.get("scale", {}), defaults.scale),
+        visual_director=_parse_visual_director_config(
+            raw.get("visual_director", {}), defaults.visual_director
+        ),
         structure=_parse_structure_config(raw.get("structure", {}), defaults.structure),
     )
 
@@ -225,6 +229,12 @@ def _parse_time_director_config(raw: Any, defaults: TimeDirectorConfig) -> TimeD
             minimum=1.0,
             maximum=600.0,
         ),
+        dark_ages_visual_duration_s=_bounded_float(
+            raw.get("dark_ages_visual_duration_s"),
+            defaults.dark_ages_visual_duration_s,
+            minimum=1.0,
+            maximum=600.0,
+        ),
     )
 
 
@@ -245,6 +255,40 @@ def _parse_scale_config(raw: Any, defaults: ScaleConfig) -> ScaleConfig:
             maximum=100000.0,
         ),
         show_scale_overlay=show_scale_overlay,
+    )
+
+
+
+def _parse_visual_director_config(raw: Any, defaults: VisualDirectorConfig) -> VisualDirectorConfig:
+    if not isinstance(raw, dict):
+        return defaults
+
+    return replace(
+        defaults,
+        epoch_transition_fraction=_bounded_float(
+            raw.get("epoch_transition_fraction"),
+            defaults.epoch_transition_fraction,
+            minimum=0.0,
+            maximum=0.60,
+        ),
+        inflation_zoom_strength=_bounded_float(
+            raw.get("inflation_zoom_strength"),
+            defaults.inflation_zoom_strength,
+            minimum=0.0,
+            maximum=4.0,
+        ),
+        reheating_pulse_strength=_bounded_float(
+            raw.get("reheating_pulse_strength"),
+            defaults.reheating_pulse_strength,
+            minimum=0.0,
+            maximum=0.50,
+        ),
+        recombination_clearing_strength=_bounded_float(
+            raw.get("recombination_clearing_strength"),
+            defaults.recombination_clearing_strength,
+            minimum=0.0,
+            maximum=0.80,
+        ),
     )
 
 def _parse_structure_config(raw: Any, defaults: StructureConfig) -> StructureConfig:

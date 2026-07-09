@@ -38,6 +38,16 @@ inflation_visual_duration_s = 38.0
 reheating_visual_duration_s = 28.0
 nucleosynthesis_visual_duration_s = 28.0
 recombination_visual_duration_s = 38.0
+dark_ages_visual_duration_s = 48.0
+
+
+[visual_director]
+# Visual transitions are deliberately smooth: epoch borders cross-fade instead of
+# hard-cutting from one look to another.
+epoch_transition_fraction = 0.18
+inflation_zoom_strength = 1.55
+reheating_pulse_strength = 0.14
+recombination_clearing_strength = 0.36
 
 [scale]
 # Size of the displayed comoving patch at a = 1.

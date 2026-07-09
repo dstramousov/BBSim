@@ -30,3 +30,14 @@ def test_time_scale_sample_explains_physical_time_mapping() -> None:
     assert sample.physical_time_s is not None
     assert "сек экрана" in sample.time_scale_text
     assert "экранная длительность" in sample.screen_duration_text
+
+
+def test_dark_ages_has_own_screen_duration_and_time_scale() -> None:
+    config = UniverseConfig.default()
+
+    assert stage_screen_duration_s(config, "dark_ages") == config.time_director.dark_ages_visual_duration_s
+    sample = sample_time_scale(config, "dark_ages", 0.5)
+
+    assert sample is not None
+    assert sample.physical_time_s is not None
+    assert "лет" in sample.physical_time_text
