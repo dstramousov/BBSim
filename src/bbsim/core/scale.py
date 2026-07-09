@@ -69,7 +69,7 @@ def build_scale_overlay_lines(state: UniverseState, config: UniverseConfig) -> t
         f"a(t): {sample.a:.2e}",
         f"видимый участок сейчас: {sample.box_now_text}",
         f"1 клетка сейчас: {sample.cell_now_text}",
-        f"эквивалент сегодня: {sample.box_size_today_mpc:g} Mpc",
+        f"эквивалент сегодня: {sample.box_today_mpc:g} Mpc",
     )
 
 

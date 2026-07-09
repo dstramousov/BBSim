@@ -66,6 +66,17 @@ def _smooth_visual_progress(value: float) -> float:
     return clamped * clamped * (3.0 - 2.0 * clamped)
 
 
+def _seed_reveal_visibility(progress: float) -> float:
+    """Return visible opacity for the personal-seed reveal.
+
+    The first live frame must not look frozen-black. The numeric field can start
+    close to zero, but the UI should immediately show a faint primordial pattern
+    and then brighten it while the timeline moves to the first checkpoint.
+    """
+
+    return 0.18 + 0.82 * _smooth_visual_progress(progress)
+
+
 class MainWindow(QMainWindow):
     """Minimal prototype window for seed, timeline, field, and report views."""
 
@@ -252,6 +263,7 @@ class MainWindow(QMainWindow):
         )
 
         self._timer = QTimer(self)
+        self._timer.setTimerType(Qt.TimerType.PreciseTimer)
         self._timer.setInterval(self._app_config.timeline.tick_interval_ms)
         self._timer.timeout.connect(self._tick_simulation)
 
@@ -376,12 +388,13 @@ class MainWindow(QMainWindow):
         self._run_state = _RUN_RUNNING
         self._main_button.setText("ПАУЗА")
         self._stage_label.setText("Состояние: эволюция запущена")
-        # Draw the first live frame immediately. Otherwise the user can see a
-        # fully populated field while the timeline still looks stuck until the
-        # first timer event arrives.
+        # Start the heartbeat first and draw a live frame immediately. This makes
+        # BIG BANG visibly enter the live loop instead of showing a dark canvas
+        # until the next event-cycle tick.
+        self._timer.start()
         self._tick_simulation()
-        if self._run_state == _RUN_RUNNING:
-            self._timer.start()
+        if self._run_state != _RUN_RUNNING:
+            self._timer.stop()
 
     def _pause_live_run(self) -> None:
         self._timer.stop()
@@ -440,7 +453,8 @@ class MainWindow(QMainWindow):
         self._update_plot()
 
         if report is None:
-            self._stage_label.setText(f"Эпоха: {active_stage_id}")
+            self._stage_label.setText(self._live_stage_status(active_stage_id))
+            self._show_live_status(active_stage_id)
             return
 
         self._show_report(report)
@@ -469,6 +483,48 @@ class MainWindow(QMainWindow):
             self._pipeline_finished_reported = True
         self._stage_label.setText("Состояние: pipeline завершён")
 
+
+    @staticmethod
+    def _live_stage_status(stage_id: str | None) -> str:
+        title_by_stage = {
+            "personal_seed": "Зерно — проявляется первичная рябь",
+            "inflation": "Инфляция — растягивается сетка пространства",
+            "reheating": "Разогрев — рождается горячая плазма",
+            "nucleosynthesis": "Нуклеосинтез — формируется первичный состав",
+            "recombination": "CMB — Вселенная становится прозрачной",
+        }
+        return f"Эпоха: {title_by_stage.get(stage_id, stage_id or 'нет')}"
+
+    def _show_live_status(self, stage_id: str | None) -> None:
+        if self._context is None:
+            return
+        text_by_stage = {
+            "personal_seed": (
+                "BIG BANG запущен\n\n"
+                "Эпоха: Зерно\n"
+                "Первичная рябь проявляется из фразы и становится начальным полем."
+            ),
+            "inflation": (
+                "Эпоха: Инфляция\n\n"
+                "Сетка пространства растягивается, мелкая рябь сглаживается, "
+                "крупный рисунок будущей структуры сохраняется."
+            ),
+            "reheating": (
+                "Эпоха: Разогрев\n\n"
+                "Энергия инфляции переходит в горячую радиационную плазму."
+            ),
+            "nucleosynthesis": (
+                "Эпоха: Нуклеосинтез\n\n"
+                "Плазма охлаждается, формируется первичный водород и гелий."
+            ),
+            "recombination": (
+                "Эпоха: Рекомбинация / CMB\n\n"
+                "Ионизация и непрозрачность падают, реликтовый отпечаток освобождается."
+            ),
+        }
+        if stage_id in text_by_stage:
+            self._report.setPlainText(text_by_stage[stage_id])
+
     def _show_current_field(self, stage_id: str | None) -> None:
         if self._context is None:
             return
@@ -485,7 +541,11 @@ class MainWindow(QMainWindow):
             return
         display = field_to_display(field).T
         if stage_id == "personal_seed":
-            display = display * _smooth_visual_progress(self._context.state.stage_progress)
+            display = np.clip(
+                display * _seed_reveal_visibility(self._context.state.stage_progress),
+                0.0,
+                1.0,
+            )
         self._field_stack.setCurrentWidget(self._image_container)
         self._image.setImage(display, levels=(0.0, 1.0), autoRange=False)
         self._fit_field_to_canvas(display.shape)
