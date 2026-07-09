@@ -44,6 +44,12 @@ class UniverseState:
     collapsed_gas_fraction: float = 0.0
     star_formation_readiness: float = 0.0
     gas_temperature_k: float = 0.0
+    first_star_count: int = 0
+    first_star_mass_fraction: float = 0.0
+    star_formation_fraction: float = 0.0
+    stellar_radiation_intensity: float = 0.0
+    ionized_bubble_fraction: float = 0.0
+    reionization_progress: float = 0.0
     a_history: list[float] = field(default_factory=list)
     t_history: list[float] = field(default_factory=list)
     h_history: list[float] = field(default_factory=list)
@@ -61,4 +67,7 @@ class UniverseState:
     gas_cooling_fraction_history: list[float] = field(default_factory=list)
     collapse_site_count_history: list[int] = field(default_factory=list)
     star_formation_readiness_history: list[float] = field(default_factory=list)
+    first_star_count_history: list[int] = field(default_factory=list)
+    stellar_radiation_history: list[float] = field(default_factory=list)
+    ionized_bubble_fraction_history: list[float] = field(default_factory=list)
     era_history: list[str] = field(default_factory=list)

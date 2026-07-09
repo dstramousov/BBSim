@@ -61,6 +61,12 @@ _STAGE_RANGES: dict[str, StagePhysicalRange] = {
         260_000_000.0 * _SECONDS_PER_YEAR,
         "почти линейно сжато",
     ),
+    "first_stars": StagePhysicalRange(
+        "first_stars",
+        260_000_000.0 * _SECONDS_PER_YEAR,
+        450_000_000.0 * _SECONDS_PER_YEAR,
+        "логарифмически сжато",
+    ),
 }
 
 
@@ -76,6 +82,7 @@ def stage_screen_duration_s(config: UniverseConfig, stage_id: str, fallback: flo
         "recombination": director.recombination_visual_duration_s,
         "dark_ages": director.dark_ages_visual_duration_s,
         "gas_collapse": director.gas_collapse_visual_duration_s,
+        "first_stars": director.first_stars_visual_duration_s,
     }
     raw_duration = durations.get(stage_id, fallback)
     return max(float(raw_duration) * max(director.duration_scale, 0.01), 0.1)

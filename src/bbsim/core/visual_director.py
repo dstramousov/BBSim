@@ -32,6 +32,7 @@ _STAGE_ORDER: tuple[str, ...] = (
     "recombination",
     "dark_ages",
     "gas_collapse",
+    "first_stars",
 )
 
 _STAGE_PROFILE: dict[str, str] = {
@@ -42,6 +43,9 @@ _STAGE_PROFILE: dict[str, str] = {
     "recombination": "recombination",
     "dark_ages": "dark_ages",
     "gas_collapse": "gas_collapse",
+    "first_stars": "first_stars",
+    "stellar_radiation": "stellar_radiation",
+    "ionized_bubbles": "ionized_bubbles",
     "cold_gas": "cold_gas",
     "collapse_sites": "collapse_sites",
     "dark_matter": "dark_matter",
@@ -101,6 +105,27 @@ _PALETTES: dict[str, tuple[tuple[float, tuple[float, float, float]], ...]] = {
         (0.52, (0.055, 0.180, 0.185)),
         (0.78, (0.230, 0.470, 0.420)),
         (1.00, (0.820, 0.940, 0.740)),
+    ),
+    "first_stars": (
+        (0.00, (0.002, 0.004, 0.016)),
+        (0.22, (0.018, 0.030, 0.070)),
+        (0.48, (0.070, 0.125, 0.180)),
+        (0.72, (0.620, 0.520, 0.250)),
+        (1.00, (1.000, 0.970, 0.760)),
+    ),
+    "stellar_radiation": (
+        (0.00, (0.002, 0.003, 0.015)),
+        (0.20, (0.030, 0.022, 0.055)),
+        (0.48, (0.210, 0.085, 0.085)),
+        (0.76, (0.950, 0.440, 0.160)),
+        (1.00, (1.000, 0.950, 0.660)),
+    ),
+    "ionized_bubbles": (
+        (0.00, (0.002, 0.006, 0.018)),
+        (0.24, (0.020, 0.040, 0.085)),
+        (0.52, (0.090, 0.185, 0.255)),
+        (0.76, (0.330, 0.560, 0.650)),
+        (1.00, (0.850, 0.960, 1.000)),
     ),
     "cold_gas": (
         (0.00, (0.002, 0.008, 0.018)),
@@ -255,6 +280,14 @@ def _apply_stage_energy(
     if stage_id == "gas_collapse":
         # Cooling gas should become sharper and less hazy without turning into stars.
         return np.clip(np.power(clamped, 1.05 - 0.28 * p) * (0.58 + 0.42 * p), 0.0, 1.0)
+    if stage_id == "first_stars":
+        # Rare first lights appear late enough to feel earned after gas collapse.
+        late = _smoothstep(max(0.0, (progress - 0.12) / 0.88))
+        return np.clip(np.power(clamped, 0.44) * (0.42 + 0.58 * late), 0.0, 1.0)
+    if stage_id == "stellar_radiation":
+        return np.clip(np.power(clamped, 0.50) * (0.72 + 0.28 * p), 0.0, 1.0)
+    if stage_id == "ionized_bubbles":
+        return np.clip(np.power(clamped, 0.70) * (0.54 + 0.46 * p), 0.0, 1.0)
     if stage_id == "cold_gas":
         return np.clip(np.power(clamped, 0.92) * 0.92 + 0.035, 0.0, 1.0)
     if stage_id == "collapse_sites":
@@ -287,6 +320,8 @@ def _apply_previous_bridge(values: np.ndarray, stage_id: str, progress: float) -
         return np.clip(values * (0.74 - 0.28 * p), 0.0, 1.0)
     if stage_id == "gas_collapse":
         return np.clip(np.power(values, 0.84) * (0.64 + 0.24 * p), 0.0, 1.0)
+    if stage_id == "first_stars":
+        return np.clip(np.power(values, 0.82) * (0.46 + 0.30 * p), 0.0, 1.0)
     return values
 
 
@@ -317,6 +352,16 @@ def _apply_epoch_glow(
     if stage_id == "collapse_sites":
         core = (values[..., None] ** 3) * (0.12 + 0.12 * p)
         return rgb + core * np.array([0.85, 0.90, 0.48], dtype=np.float32)
+    if stage_id == "first_stars":
+        star_core = (values[..., None] ** 4) * (0.30 + 0.30 * p)
+        halo = _filament_sheen(values, progress) * 0.65
+        return rgb + star_core * np.array([1.00, 0.88, 0.38], dtype=np.float32) + halo[..., None] * np.array([0.18, 0.12, 0.04], dtype=np.float32)
+    if stage_id == "stellar_radiation":
+        glow = (values[..., None] ** 2) * (0.22 + 0.14 * np.sin(progress * np.pi * 10.0))
+        return rgb + glow * np.array([1.0, 0.42, 0.14], dtype=np.float32)
+    if stage_id == "ionized_bubbles":
+        bubble_edge = _filament_sheen(values, progress)
+        return rgb + bubble_edge[..., None] * np.array([0.18, 0.38, 0.45], dtype=np.float32)
     if stage_id == "halo_candidates":
         sparkle = (values[..., None] ** 3) * (0.14 + 0.10 * p)
         return rgb + sparkle * np.array([0.95, 0.52, 0.85], dtype=np.float32)

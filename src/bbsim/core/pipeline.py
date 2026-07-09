@@ -9,6 +9,7 @@ from bbsim.core.report import StageReport
 from bbsim.stages.base import SimulationStage
 from bbsim.stages.dark_ages import DarkAgesStage
 from bbsim.stages.gas_collapse import GasCollapseStage
+from bbsim.stages.first_stars import FirstStarsStage
 from bbsim.stages.early_universe import NucleosynthesisStage, ReheatingStage
 from bbsim.stages.inflation import InflationStage
 from bbsim.stages.personal_seed import PersonalSeedStage
@@ -112,5 +113,6 @@ def create_default_pipeline() -> UniversePipeline:
             RecombinationStage(),
             DarkAgesStage(),
             GasCollapseStage(),
+            FirstStarsStage(),
         ]
     )

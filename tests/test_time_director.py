@@ -55,3 +55,18 @@ def test_gas_collapse_has_own_screen_duration_and_time_scale() -> None:
     assert sample is not None
     assert sample.physical_time_s is not None
     assert "млн лет" in sample.physical_time_text
+
+
+
+def test_first_stars_has_own_screen_duration_and_time_scale() -> None:
+    config = UniverseConfig.default()
+
+    assert (
+        stage_screen_duration_s(config, "first_stars")
+        == config.time_director.first_stars_visual_duration_s
+    )
+    sample = sample_time_scale(config, "first_stars", 0.5)
+
+    assert sample is not None
+    assert sample.physical_time_s is not None
+    assert "млн лет" in sample.physical_time_text

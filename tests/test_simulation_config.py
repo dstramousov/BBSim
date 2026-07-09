@@ -54,6 +54,7 @@ nucleosynthesis_visual_duration_s = 44.0
 recombination_visual_duration_s = 55.0
 dark_ages_visual_duration_s = 66.0
 gas_collapse_visual_duration_s = 77.0
+first_stars_visual_duration_s = 88.0
 
 [scale]
 box_size_today_mpc = 500.0
@@ -91,6 +92,7 @@ show_scale_overlay = false
     assert config.time_director.recombination_visual_duration_s == 55.0
     assert config.time_director.dark_ages_visual_duration_s == 66.0
     assert config.time_director.gas_collapse_visual_duration_s == 77.0
+    assert config.time_director.first_stars_visual_duration_s == 88.0
     assert config.scale.box_size_today_mpc == 500.0
     assert config.scale.show_scale_overlay is False
 
@@ -144,6 +146,7 @@ nucleosynthesis_visual_duration_s = -1
 recombination_visual_duration_s = 999
 dark_ages_visual_duration_s = 0
 gas_collapse_visual_duration_s = 999
+first_stars_visual_duration_s = 0
 
 [scale]
 box_size_today_mpc = -4
@@ -187,5 +190,6 @@ show_scale_overlay = "yes"
     assert config.time_director.recombination_visual_duration_s == 600.0
     assert config.time_director.dark_ages_visual_duration_s == 1.0
     assert config.time_director.gas_collapse_visual_duration_s == 600.0
+    assert config.time_director.first_stars_visual_duration_s == 1.0
     assert config.scale.box_size_today_mpc == 0.001
     assert config.scale.show_scale_overlay == UniverseConfig.default().scale.show_scale_overlay

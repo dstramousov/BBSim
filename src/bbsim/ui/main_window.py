@@ -201,6 +201,9 @@ class MainWindow(QMainWindow):
         self._display_layer_combo.addItem("Будущие гало / звёздные узлы", "future_star_sites")
         self._display_layer_combo.addItem("Холодный газ", "cold_gas_density")
         self._display_layer_combo.addItem("Зоны газового коллапса", "collapse_sites")
+        self._display_layer_combo.addItem("Первые звёзды", "first_star_density")
+        self._display_layer_combo.addItem("Излучение первых звёзд", "stellar_radiation")
+        self._display_layer_combo.addItem("Ионизированные пузыри", "ionized_bubbles")
         self._display_layer_combo.addItem("Обычная материя / газ", "baryon_density")
         self._display_layer_combo.addItem("Смешанный вид", "mixed_matter")
         self._stage_label = QLabel("Состояние: ожидание параметров")
@@ -601,6 +604,18 @@ class MainWindow(QMainWindow):
                     f"• готовность к первым звёздам: {self._context.state.star_formation_readiness:.2f}",
                 )
             )
+        if stage_id == "first_stars":
+            lines.extend(
+                (
+                    "",
+                    "Первый свет:",
+                    f"• очагов первых звёзд: {self._context.state.first_star_count}",
+                    f"• доля газа в звездообразовании: {self._context.state.star_formation_fraction:.1%}",
+                    f"• интенсивность излучения: {self._context.state.stellar_radiation_intensity:.2f}",
+                    f"• ионизированных пузырей: {self._context.state.ionized_bubble_fraction:.1%}",
+                    f"• прогресс к реионизации: {self._context.state.reionization_progress:.2f}",
+                )
+            )
         if time_sample is not None:
             lines.extend(
                 (
@@ -634,6 +649,12 @@ class MainWindow(QMainWindow):
             return fields.cold_gas_density, "cold_gas"
         if layer == "collapse_sites" and self._has_field_signal(fields.collapse_sites):
             return fields.collapse_sites, "collapse_sites"
+        if layer == "first_star_density" and self._has_field_signal(fields.first_star_density):
+            return fields.first_star_density, "first_stars"
+        if layer == "stellar_radiation" and self._has_field_signal(fields.stellar_radiation):
+            return fields.stellar_radiation, "stellar_radiation"
+        if layer == "ionized_bubbles" and self._has_field_signal(fields.ionized_bubbles):
+            return fields.ionized_bubbles, "ionized_bubbles"
         if layer == "baryon_density" and self._has_field_signal(fields.baryon_density):
             return fields.baryon_density, "baryon_gas"
         if layer == "mixed_matter":
@@ -641,6 +662,13 @@ class MainWindow(QMainWindow):
             if mixed is not None:
                 return mixed, "mixed_matter"
 
+        if stage_id == "first_stars":
+            if self._has_field_signal(fields.first_star_density):
+                return self._first_stars_field(), "first_stars"
+            if self._has_field_signal(fields.stellar_ignition):
+                return fields.stellar_ignition, "first_stars"
+            if self._has_field_signal(fields.collapse_sites):
+                return fields.collapse_sites, "first_stars"
         if stage_id == "gas_collapse":
             if self._has_field_signal(fields.collapse_sites):
                 return self._gas_collapse_field(), "gas_collapse"
@@ -665,6 +693,18 @@ class MainWindow(QMainWindow):
         if self._has_field_signal(fields.seed_delta):
             return fields.seed_delta, stage_id
         return None
+
+    def _first_stars_field(self) -> np.ndarray:
+        if self._context is None:
+            raise RuntimeError("first stars field requested without context")
+        fields = self._context.fields
+        base = fields.first_star_density
+        cold = self._normalize_for_display(fields.cold_gas_density) if self._has_field_signal(fields.cold_gas_density) else np.zeros_like(base)
+        stars = self._normalize_for_display(fields.first_star_density) if self._has_field_signal(fields.first_star_density) else np.zeros_like(base)
+        radiation = self._normalize_for_display(fields.stellar_radiation) if self._has_field_signal(fields.stellar_radiation) else np.zeros_like(base)
+        bubbles = self._normalize_for_display(fields.ionized_bubbles) if self._has_field_signal(fields.ionized_bubbles) else np.zeros_like(base)
+        collapse = self._normalize_for_display(fields.collapse_sites) if self._has_field_signal(fields.collapse_sites) else np.zeros_like(base)
+        return (0.20 * cold + 0.18 * collapse + 0.38 * stars + 0.16 * radiation + 0.08 * bubbles).astype(np.float32)
 
     def _gas_collapse_field(self) -> np.ndarray:
         if self._context is None:

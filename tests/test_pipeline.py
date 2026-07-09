@@ -27,6 +27,7 @@ def test_default_pipeline_reaches_all_initial_checkpoints() -> None:
         "recombination",
         "dark_ages",
         "gas_collapse",
+        "first_stars",
     ]
 
 

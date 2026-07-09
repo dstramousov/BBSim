@@ -28,6 +28,10 @@ class UniverseFields:
     cold_gas_density: np.ndarray
     molecular_cooling: np.ndarray
     collapse_sites: np.ndarray
+    first_star_density: np.ndarray
+    stellar_ignition: np.ndarray
+    ionized_bubbles: np.ndarray
+    stellar_radiation: np.ndarray
     stars: np.ndarray
     metals: np.ndarray
     black_holes: np.ndarray
@@ -59,6 +63,10 @@ def create_empty_fields(grid_size: int) -> UniverseFields:
         cold_gas_density=zero.copy(),
         molecular_cooling=zero.copy(),
         collapse_sites=zero.copy(),
+        first_star_density=zero.copy(),
+        stellar_ignition=zero.copy(),
+        ionized_bubbles=zero.copy(),
+        stellar_radiation=zero.copy(),
         stars=zero.copy(),
         metals=zero.copy(),
         black_holes=zero.copy(),
