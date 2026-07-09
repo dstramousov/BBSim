@@ -22,7 +22,7 @@ def test_default_pipeline_reaches_all_initial_checkpoints() -> None:
         "inflation",
         "reheating",
         "nucleosynthesis",
-        "recombination_preview",
+        "recombination",
     ]
 
 
@@ -65,3 +65,25 @@ def test_reheating_and_nucleosynthesis_update_early_fields() -> None:
     assert context.state.h_history
     assert context.state.radiation_fraction_history
     assert context.state.matter_fraction_history
+
+
+def test_recombination_releases_transparent_cmb() -> None:
+    config = UniverseConfig.default(player_seed_phrase="Dimas")
+    context = create_run_context(config=config, backend=NumpyBackend())
+    pipeline = create_default_pipeline()
+
+    while not pipeline.is_finished:
+        pipeline.step_to_checkpoint(context)
+        report = context.history.reports[-1]
+        if report.stage_id == "recombination":
+            break
+        pipeline.advance(context)
+
+    assert context.state.current_stage == "recombination"
+    assert context.state.temperature_k <= 3500.0
+    assert context.state.ionization_fraction < 0.01
+    assert context.state.opacity < 0.01
+    assert context.state.cmb_released is True
+    assert context.fields.cmb.any()
+    assert context.state.ionization_fraction_history
+    assert context.state.opacity_history

@@ -36,7 +36,7 @@ def test_inflation_creates_distinct_smoothed_field() -> None:
 
 
 def test_recombination_uses_inflation_shaped_seed() -> None:
-    context, report = _run_until_stage("recombination_preview")
+    context, report = _run_until_stage("recombination")
 
     assert report.metrics["cmb_contrast"] > 0.0
     assert np.any(context.fields.cmb)

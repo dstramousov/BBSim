@@ -10,7 +10,7 @@ from bbsim.stages.base import SimulationStage
 from bbsim.stages.early_universe import NucleosynthesisStage, ReheatingStage
 from bbsim.stages.inflation import InflationStage
 from bbsim.stages.personal_seed import PersonalSeedStage
-from bbsim.stages.recombination import RecombinationPreviewStage
+from bbsim.stages.recombination import RecombinationStage
 
 
 @dataclass(slots=True)
@@ -107,6 +107,6 @@ def create_default_pipeline() -> UniversePipeline:
             InflationStage(),
             ReheatingStage(),
             NucleosynthesisStage(),
-            RecombinationPreviewStage(),
+            RecombinationStage(),
         ]
     )

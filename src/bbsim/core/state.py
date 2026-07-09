@@ -24,6 +24,9 @@ class UniverseState:
     frac_lambda: float = 0.0
     current_stage: str = "not_started"
     stage_progress: float = 0.0
+    ionization_fraction: float = 1.0
+    opacity: float = 1.0
+    cmb_released: bool = False
     curvature: float = 0.0
     hydrogen_fraction: float = 0.0
     helium_fraction: float = 0.0
@@ -37,4 +40,6 @@ class UniverseState:
     matter_fraction_history: list[float] = field(default_factory=list)
     curvature_fraction_history: list[float] = field(default_factory=list)
     dark_energy_fraction_history: list[float] = field(default_factory=list)
+    ionization_fraction_history: list[float] = field(default_factory=list)
+    opacity_history: list[float] = field(default_factory=list)
     era_history: list[str] = field(default_factory=list)

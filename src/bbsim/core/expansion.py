@@ -122,6 +122,8 @@ class ExpansionEngine:
             state.matter_fraction_history.append(state.frac_m)
             state.curvature_fraction_history.append(state.frac_k)
             state.dark_energy_fraction_history.append(state.frac_lambda)
+            state.ionization_fraction_history.append(state.ionization_fraction)
+            state.opacity_history.append(state.opacity)
             state.era_history.append(state.era)
 
         return sample

@@ -18,7 +18,7 @@ DEFAULT_TIMELINE_STAGES: tuple[TimelineStage, ...] = (
     TimelineStage("inflation", "Инфляция"),
     TimelineStage("reheating", "Разогрев"),
     TimelineStage("nucleosynthesis", "Нуклеосинтез"),
-    TimelineStage("recombination_preview", "CMB"),
+    TimelineStage("recombination", "CMB"),
     TimelineStage("dark_ages", "Тёмные века"),
     TimelineStage("first_stars", "Первые звёзды"),
     TimelineStage("galaxy_web", "Галактики"),

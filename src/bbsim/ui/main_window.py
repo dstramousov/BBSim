@@ -177,11 +177,19 @@ class MainWindow(QMainWindow):
         self._components_plot.setYRange(0.0, 1.0)
         self._components_plot.addLegend(offset=(10, 10))
 
+        self._recombination_plot = pg.PlotWidget(title="Рекомбинация")
+        self._recombination_plot.showGrid(x=True, y=True, alpha=0.25)
+        self._recombination_plot.setLabel("left", "fraction")
+        self._recombination_plot.setLabel("bottom", "sample")
+        self._recombination_plot.setYRange(0.0, 1.0)
+        self._recombination_plot.addLegend(offset=(10, 10))
+
         self._plot_panel = QWidget()
         plot_panel_layout = QVBoxLayout(self._plot_panel)
         plot_panel_layout.setContentsMargins(0, 0, 0, 0)
         plot_panel_layout.addWidget(self._scale_plot, stretch=1)
         plot_panel_layout.addWidget(self._components_plot, stretch=1)
+        plot_panel_layout.addWidget(self._recombination_plot, stretch=1)
 
         self._scale_curve = self._scale_plot.plot([], [], pen=pg.mkPen(width=2))
         self._radiation_curve = self._components_plot.plot(
@@ -195,6 +203,12 @@ class MainWindow(QMainWindow):
         )
         self._curvature_curve = self._components_plot.plot(
             [], [], pen=pg.mkPen("#aaaaaa", width=1), name="curvature"
+        )
+        self._ionization_curve = self._recombination_plot.plot(
+            [], [], pen=pg.mkPen("#8fd3ff", width=2), name="ionization"
+        )
+        self._opacity_curve = self._recombination_plot.plot(
+            [], [], pen=pg.mkPen("#ffb86c", width=2), name="opacity"
         )
 
         self._plot_stack = QStackedWidget()
@@ -431,7 +445,7 @@ class MainWindow(QMainWindow):
         if self._context is None:
             return
         fields = self._context.fields
-        if stage_id == "recombination_preview" and np.any(fields.cmb):
+        if stage_id == "recombination" and np.any(fields.cmb):
             field = fields.cmb
         elif stage_id in {"reheating", "nucleosynthesis"} and np.any(fields.radiation):
             field = fields.radiation
@@ -502,12 +516,26 @@ class MainWindow(QMainWindow):
         else:
             self._curvature_curve.setData([], [])
 
+        ionization = np.asarray(state.ionization_fraction_history, dtype=float)
+        opacity = np.asarray(state.opacity_history, dtype=float)
+        recombination_count = min(ionization.size, opacity.size)
+        if recombination_count <= 0:
+            self._ionization_curve.setData([], [])
+            self._opacity_curve.setData([], [])
+            return
+
+        recombination_x = np.arange(recombination_count)
+        self._ionization_curve.setData(recombination_x, ionization[-recombination_count:])
+        self._opacity_curve.setData(recombination_x, opacity[-recombination_count:])
+
     def _clear_plot_data(self) -> None:
         self._scale_curve.setData([], [])
         self._radiation_curve.setData([], [])
         self._matter_curve.setData([], [])
         self._dark_energy_curve.setData([], [])
         self._curvature_curve.setData([], [])
+        self._ionization_curve.setData([], [])
+        self._opacity_curve.setData([], [])
 
     @staticmethod
     def _create_int_spin(minimum: int, maximum: int, value: int, step: int) -> QSpinBox:
