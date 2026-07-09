@@ -44,6 +44,7 @@ def test_visual_director_supports_dark_age_matter_profiles() -> None:
     first_stars = render_visual_frame(field, stage_id="first_stars", progress=0.7, config=config)
     radiation = render_visual_frame(field, stage_id="stellar_radiation", progress=0.7, config=config)
     bubbles = render_visual_frame(field, stage_id="ionized_bubbles", progress=0.7, config=config)
+    reionization = render_visual_frame(field, stage_id="reionization", progress=0.7, config=config)
 
     assert dark.profile_id == "dark_matter"
     assert gas.profile_id == "baryon_gas"
@@ -56,6 +57,7 @@ def test_visual_director_supports_dark_age_matter_profiles() -> None:
     assert first_stars.profile_id == "first_stars"
     assert radiation.profile_id == "stellar_radiation"
     assert bubbles.profile_id == "ionized_bubbles"
+    assert reionization.profile_id == "reionization"
     assert (
         dark.rgb.shape
         == gas.rgb.shape
@@ -68,9 +70,11 @@ def test_visual_director_supports_dark_age_matter_profiles() -> None:
         == first_stars.rgb.shape
         == radiation.rgb.shape
         == bubbles.rgb.shape
+        == reionization.rgb.shape
     )
     assert not np.allclose(dark.rgb, gas.rgb)
     assert not np.allclose(potential.rgb, halos.rgb)
     assert not np.allclose(cold_gas.rgb, collapse_sites.rgb)
     assert not np.allclose(first_stars.rgb, radiation.rgb)
     assert not np.allclose(radiation.rgb, bubbles.rgb)
+    assert not np.allclose(first_stars.rgb, reionization.rgb)

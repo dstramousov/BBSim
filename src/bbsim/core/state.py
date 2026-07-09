@@ -49,6 +49,10 @@ class UniverseState:
     star_formation_fraction: float = 0.0
     stellar_radiation_intensity: float = 0.0
     ionized_bubble_fraction: float = 0.0
+    ionized_fraction: float = 0.0
+    neutral_fraction: float = 1.0
+    bubble_overlap_fraction: float = 0.0
+    photoheating_feedback: float = 0.0
     reionization_progress: float = 0.0
     a_history: list[float] = field(default_factory=list)
     t_history: list[float] = field(default_factory=list)
@@ -70,4 +74,8 @@ class UniverseState:
     first_star_count_history: list[int] = field(default_factory=list)
     stellar_radiation_history: list[float] = field(default_factory=list)
     ionized_bubble_fraction_history: list[float] = field(default_factory=list)
+    ionized_fraction_history: list[float] = field(default_factory=list)
+    neutral_fraction_history: list[float] = field(default_factory=list)
+    bubble_overlap_fraction_history: list[float] = field(default_factory=list)
+    photoheating_feedback_history: list[float] = field(default_factory=list)
     era_history: list[str] = field(default_factory=list)

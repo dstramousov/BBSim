@@ -14,6 +14,7 @@ from bbsim.stages.early_universe import NucleosynthesisStage, ReheatingStage
 from bbsim.stages.inflation import InflationStage
 from bbsim.stages.personal_seed import PersonalSeedStage
 from bbsim.stages.recombination import RecombinationStage
+from bbsim.stages.reionization import ReionizationStage
 
 
 @dataclass(slots=True)
@@ -114,5 +115,6 @@ def create_default_pipeline() -> UniversePipeline:
             DarkAgesStage(),
             GasCollapseStage(),
             FirstStarsStage(),
+            ReionizationStage(),
         ]
     )

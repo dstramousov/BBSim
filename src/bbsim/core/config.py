@@ -66,6 +66,7 @@ class TimeDirectorConfig:
     dark_ages_visual_duration_s: float = 48.0
     gas_collapse_visual_duration_s: float = 52.0
     first_stars_visual_duration_s: float = 58.0
+    reionization_visual_duration_s: float = 64.0
 
 
 @dataclass(frozen=True, slots=True)

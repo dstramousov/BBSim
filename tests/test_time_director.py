@@ -70,3 +70,17 @@ def test_first_stars_has_own_screen_duration_and_time_scale() -> None:
     assert sample is not None
     assert sample.physical_time_s is not None
     assert "млн лет" in sample.physical_time_text
+
+
+def test_reionization_has_own_screen_duration_and_time_scale() -> None:
+    config = UniverseConfig.default()
+
+    assert (
+        stage_screen_duration_s(config, "reionization")
+        == config.time_director.reionization_visual_duration_s
+    )
+    sample = sample_time_scale(config, "reionization", 0.5)
+
+    assert sample is not None
+    assert sample.physical_time_s is not None
+    assert "млн лет" in sample.physical_time_text or "млрд лет" in sample.physical_time_text

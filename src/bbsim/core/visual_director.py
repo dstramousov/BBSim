@@ -33,6 +33,7 @@ _STAGE_ORDER: tuple[str, ...] = (
     "dark_ages",
     "gas_collapse",
     "first_stars",
+    "reionization",
 )
 
 _STAGE_PROFILE: dict[str, str] = {
@@ -44,6 +45,7 @@ _STAGE_PROFILE: dict[str, str] = {
     "dark_ages": "dark_ages",
     "gas_collapse": "gas_collapse",
     "first_stars": "first_stars",
+    "reionization": "reionization",
     "stellar_radiation": "stellar_radiation",
     "ionized_bubbles": "ionized_bubbles",
     "cold_gas": "cold_gas",
@@ -112,6 +114,13 @@ _PALETTES: dict[str, tuple[tuple[float, tuple[float, float, float]], ...]] = {
         (0.48, (0.070, 0.125, 0.180)),
         (0.72, (0.620, 0.520, 0.250)),
         (1.00, (1.000, 0.970, 0.760)),
+    ),
+    "reionization": (
+        (0.00, (0.002, 0.005, 0.018)),
+        (0.20, (0.012, 0.030, 0.070)),
+        (0.48, (0.055, 0.150, 0.230)),
+        (0.76, (0.250, 0.540, 0.680)),
+        (1.00, (0.900, 0.980, 1.000)),
     ),
     "stellar_radiation": (
         (0.00, (0.002, 0.003, 0.015)),
@@ -284,6 +293,9 @@ def _apply_stage_energy(
         # Rare first lights appear late enough to feel earned after gas collapse.
         late = _smoothstep(max(0.0, (progress - 0.12) / 0.88))
         return np.clip(np.power(clamped, 0.44) * (0.42 + 0.58 * late), 0.0, 1.0)
+    if stage_id == "reionization":
+        # Reionization should read as expanding UV bubbles, not as a dense starfield.
+        return np.clip(np.power(clamped, 0.62) * (0.46 + 0.54 * p), 0.0, 1.0)
     if stage_id == "stellar_radiation":
         return np.clip(np.power(clamped, 0.50) * (0.72 + 0.28 * p), 0.0, 1.0)
     if stage_id == "ionized_bubbles":
@@ -322,6 +334,8 @@ def _apply_previous_bridge(values: np.ndarray, stage_id: str, progress: float) -
         return np.clip(np.power(values, 0.84) * (0.64 + 0.24 * p), 0.0, 1.0)
     if stage_id == "first_stars":
         return np.clip(np.power(values, 0.82) * (0.46 + 0.30 * p), 0.0, 1.0)
+    if stage_id == "reionization":
+        return np.clip(np.power(values, 0.78) * (0.62 + 0.28 * p), 0.0, 1.0)
     return values
 
 
@@ -355,7 +369,19 @@ def _apply_epoch_glow(
     if stage_id == "first_stars":
         star_core = (values[..., None] ** 4) * (0.30 + 0.30 * p)
         halo = _filament_sheen(values, progress) * 0.65
-        return rgb + star_core * np.array([1.00, 0.88, 0.38], dtype=np.float32) + halo[..., None] * np.array([0.18, 0.12, 0.04], dtype=np.float32)
+        return (
+            rgb
+            + star_core * np.array([1.00, 0.88, 0.38], dtype=np.float32)
+            + halo[..., None] * np.array([0.18, 0.12, 0.04], dtype=np.float32)
+        )
+    if stage_id == "reionization":
+        bubble_edge = _filament_sheen(values, progress) * (0.85 + 0.45 * p)
+        uv_glow = (values[..., None] ** 2) * (0.10 + 0.18 * p)
+        return (
+            rgb
+            + bubble_edge[..., None] * np.array([0.18, 0.42, 0.52], dtype=np.float32)
+            + uv_glow * np.array([0.55, 0.85, 1.00], dtype=np.float32)
+        )
     if stage_id == "stellar_radiation":
         glow = (values[..., None] ** 2) * (0.22 + 0.14 * np.sin(progress * np.pi * 10.0))
         return rgb + glow * np.array([1.0, 0.42, 0.14], dtype=np.float32)

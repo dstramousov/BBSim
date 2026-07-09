@@ -204,6 +204,7 @@ class MainWindow(QMainWindow):
         self._display_layer_combo.addItem("Первые звёзды", "first_star_density")
         self._display_layer_combo.addItem("Излучение первых звёзд", "stellar_radiation")
         self._display_layer_combo.addItem("Ионизированные пузыри", "ionized_bubbles")
+        self._display_layer_combo.addItem("Ионизация / реионизация", "ionization")
         self._display_layer_combo.addItem("Обычная материя / газ", "baryon_density")
         self._display_layer_combo.addItem("Смешанный вид", "mixed_matter")
         self._stage_label = QLabel("Состояние: ожидание параметров")
@@ -276,7 +277,7 @@ class MainWindow(QMainWindow):
         self._components_plot.setYRange(0.0, 1.0)
         self._components_plot.addLegend(offset=(10, 10))
 
-        self._recombination_plot = pg.PlotWidget(title="Рекомбинация")
+        self._recombination_plot = pg.PlotWidget(title="Ионизация / прозрачность")
         self._recombination_plot.showGrid(x=True, y=True, alpha=0.25)
         self._recombination_plot.setLabel("left", "fraction")
         self._recombination_plot.setLabel("bottom", "sample")
@@ -307,7 +308,7 @@ class MainWindow(QMainWindow):
             [], [], pen=pg.mkPen("#8fd3ff", width=2), name="ionization"
         )
         self._opacity_curve = self._recombination_plot.plot(
-            [], [], pen=pg.mkPen("#ffb86c", width=2), name="opacity"
+            [], [], pen=pg.mkPen("#ffb86c", width=2), name="opacity / neutral"
         )
 
         self._plot_stack = QStackedWidget()
@@ -616,6 +617,18 @@ class MainWindow(QMainWindow):
                     f"• прогресс к реионизации: {self._context.state.reionization_progress:.2f}",
                 )
             )
+        if stage_id == "reionization":
+            lines.extend(
+                (
+                    "",
+                    "Реионизация:",
+                    f"• ионизированная доля: {self._context.state.ionized_fraction:.1%}",
+                    f"• нейтральная доля: {self._context.state.neutral_fraction:.1%}",
+                    f"• перекрытие пузырей: {self._context.state.bubble_overlap_fraction:.1%}",
+                    f"• photoheating feedback: {self._context.state.photoheating_feedback:.2f}",
+                    f"• температура нагретого газа: {self._context.state.gas_temperature_k:.0f} K",
+                )
+            )
         if time_sample is not None:
             lines.extend(
                 (
@@ -655,6 +668,8 @@ class MainWindow(QMainWindow):
             return fields.stellar_radiation, "stellar_radiation"
         if layer == "ionized_bubbles" and self._has_field_signal(fields.ionized_bubbles):
             return fields.ionized_bubbles, "ionized_bubbles"
+        if layer == "ionization" and self._has_field_signal(fields.ionization):
+            return fields.ionization, "reionization"
         if layer == "baryon_density" and self._has_field_signal(fields.baryon_density):
             return fields.baryon_density, "baryon_gas"
         if layer == "mixed_matter":
@@ -662,6 +677,11 @@ class MainWindow(QMainWindow):
             if mixed is not None:
                 return mixed, "mixed_matter"
 
+        if stage_id == "reionization":
+            if self._has_field_signal(fields.ionization):
+                return self._reionization_field(), "reionization"
+            if self._has_field_signal(fields.ionized_bubbles):
+                return fields.ionized_bubbles, "reionization"
         if stage_id == "first_stars":
             if self._has_field_signal(fields.first_star_density):
                 return self._first_stars_field(), "first_stars"
@@ -693,6 +713,45 @@ class MainWindow(QMainWindow):
         if self._has_field_signal(fields.seed_delta):
             return fields.seed_delta, stage_id
         return None
+
+    def _reionization_field(self) -> np.ndarray:
+        if self._context is None:
+            raise RuntimeError("reionization field requested without context")
+        fields = self._context.fields
+        base = fields.ionization
+        ionization = (
+            self._normalize_for_display(fields.ionization)
+            if self._has_field_signal(fields.ionization)
+            else np.zeros_like(base)
+        )
+        bubbles = (
+            self._normalize_for_display(fields.ionized_bubbles)
+            if self._has_field_signal(fields.ionized_bubbles)
+            else np.zeros_like(base)
+        )
+        radiation = (
+            self._normalize_for_display(fields.stellar_radiation)
+            if self._has_field_signal(fields.stellar_radiation)
+            else np.zeros_like(base)
+        )
+        stars = (
+            self._normalize_for_display(fields.first_star_density)
+            if self._has_field_signal(fields.first_star_density)
+            else np.zeros_like(base)
+        )
+        cold = (
+            self._normalize_for_display(fields.cold_gas_density)
+            if self._has_field_signal(fields.cold_gas_density)
+            else np.zeros_like(base)
+        )
+        neutral_gaps = np.clip(1.0 - cold, 0.0, 1.0)
+        return (
+            0.42 * ionization
+            + 0.22 * bubbles
+            + 0.18 * radiation
+            + 0.10 * stars
+            + 0.08 * neutral_gaps
+        ).astype(np.float32)
 
     def _first_stars_field(self) -> np.ndarray:
         if self._context is None:

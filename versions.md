@@ -206,3 +206,12 @@
 - В UI добавлены слои “Первые звёзды”, “Излучение первых звёзд” и “Ионизированные пузыри”.
 - VisualDirector получил профили `first_stars`, `stellar_radiation` и `ionized_bubbles` с плавным переходом от газового коллапса к первому свету.
 
+## v0.0.23 -> v0.0.24
+
+- Синхронизирована версия проекта до 0.0.24.
+- Добавлена эпоха `reionization` после `first_stars`: ионизированные пузыри расширяются и начинают перекрываться в нейтральном газе.
+- Добавлены скалярные метрики `ionized_fraction`, `neutral_fraction`, `bubble_overlap_fraction` и `photoheating_feedback` с историями для графиков/диагностики.
+- В UI добавлены слой “Ионизация / реионизация”, live-аннотация реионизации и auto-профиль отображения новой эпохи.
+- `TimeDirector`, timeline, config parser и `config/simulation.toml` получили `reionization_visual_duration_s`.
+- `VisualDirector` получил профиль `reionization` и плавный мост от первых звёзд к UV-пузырям.
+- Добавлены regression-тесты для pipeline, конфигурации, time-scale, visual profile и checkpoint-а реионизации.

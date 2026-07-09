@@ -22,6 +22,7 @@ DEFAULT_TIMELINE_STAGES: tuple[TimelineStage, ...] = (
     TimelineStage("dark_ages", "Тёмные века"),
     TimelineStage("gas_collapse", "Сжатие газа"),
     TimelineStage("first_stars", "Первые звёзды"),
+    TimelineStage("reionization", "Реионизация"),
     TimelineStage("galaxy_web", "Галактики"),
     TimelineStage("dark_energy", "Тёмная энергия"),
     TimelineStage("fate", "Судьба"),

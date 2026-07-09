@@ -41,6 +41,7 @@ recombination_visual_duration_s = 38.0
 dark_ages_visual_duration_s = 48.0
 gas_collapse_visual_duration_s = 52.0
 first_stars_visual_duration_s = 58.0
+reionization_visual_duration_s = 64.0
 
 
 [visual_director]
@@ -75,3 +76,5 @@ black_hole_efficiency = 0.15
 # before the first-stars stage.
 # v0.0.23: first_stars_visual_duration_s controls the first-light epoch,
 # where stars ignite only inside prepared collapse sites.
+# v0.0.24: reionization_visual_duration_s controls the epoch where first-star
+# radiation expands and overlaps ionized bubbles through neutral gas.
