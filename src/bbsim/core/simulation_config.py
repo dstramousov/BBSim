@@ -235,6 +235,12 @@ def _parse_time_director_config(raw: Any, defaults: TimeDirectorConfig) -> TimeD
             minimum=1.0,
             maximum=600.0,
         ),
+        gas_collapse_visual_duration_s=_bounded_float(
+            raw.get("gas_collapse_visual_duration_s"),
+            defaults.gas_collapse_visual_duration_s,
+            minimum=1.0,
+            maximum=600.0,
+        ),
     )
 
 

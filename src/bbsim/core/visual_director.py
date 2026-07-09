@@ -31,6 +31,7 @@ _STAGE_ORDER: tuple[str, ...] = (
     "nucleosynthesis",
     "recombination",
     "dark_ages",
+    "gas_collapse",
 )
 
 _STAGE_PROFILE: dict[str, str] = {
@@ -40,6 +41,9 @@ _STAGE_PROFILE: dict[str, str] = {
     "nucleosynthesis": "nucleosynthesis",
     "recombination": "recombination",
     "dark_ages": "dark_ages",
+    "gas_collapse": "gas_collapse",
+    "cold_gas": "cold_gas",
+    "collapse_sites": "collapse_sites",
     "dark_matter": "dark_matter",
     "baryon_gas": "baryon_gas",
     "mixed_matter": "mixed_matter",
@@ -89,6 +93,28 @@ _PALETTES: dict[str, tuple[tuple[float, tuple[float, float, float]], ...]] = {
         (0.52, (0.075, 0.115, 0.205)),
         (0.78, (0.265, 0.350, 0.505)),
         (1.00, (0.690, 0.770, 0.860)),
+    ),
+
+    "gas_collapse": (
+        (0.00, (0.002, 0.006, 0.018)),
+        (0.24, (0.012, 0.050, 0.070)),
+        (0.52, (0.055, 0.180, 0.185)),
+        (0.78, (0.230, 0.470, 0.420)),
+        (1.00, (0.820, 0.940, 0.740)),
+    ),
+    "cold_gas": (
+        (0.00, (0.002, 0.008, 0.018)),
+        (0.25, (0.012, 0.060, 0.078)),
+        (0.55, (0.050, 0.220, 0.210)),
+        (0.78, (0.240, 0.560, 0.470)),
+        (1.00, (0.860, 0.980, 0.760)),
+    ),
+    "collapse_sites": (
+        (0.00, (0.003, 0.002, 0.012)),
+        (0.22, (0.020, 0.026, 0.060)),
+        (0.50, (0.090, 0.160, 0.190)),
+        (0.76, (0.450, 0.620, 0.380)),
+        (1.00, (1.000, 0.960, 0.660)),
     ),
     "dark_matter": (
         (0.00, (0.002, 0.003, 0.018)),
@@ -226,6 +252,13 @@ def _apply_stage_energy(
     if stage_id == "dark_ages":
         # The light fades, but contrast in the hidden scaffold grows.
         return np.clip(np.power(clamped, 0.78) * (0.42 + 0.58 * p), 0.0, 1.0)
+    if stage_id == "gas_collapse":
+        # Cooling gas should become sharper and less hazy without turning into stars.
+        return np.clip(np.power(clamped, 1.05 - 0.28 * p) * (0.58 + 0.42 * p), 0.0, 1.0)
+    if stage_id == "cold_gas":
+        return np.clip(np.power(clamped, 0.92) * 0.92 + 0.035, 0.0, 1.0)
+    if stage_id == "collapse_sites":
+        return np.clip(np.power(clamped, 0.36) * (0.62 + 0.38 * p), 0.0, 1.0)
     if stage_id == "dark_matter":
         return np.clip(np.power(clamped, 0.62), 0.0, 1.0)
     if stage_id == "baryon_gas":
@@ -252,6 +285,8 @@ def _apply_previous_bridge(values: np.ndarray, stage_id: str, progress: float) -
         return np.clip(values * (0.95 - 0.20 * p), 0.0, 1.0)
     if stage_id == "dark_ages":
         return np.clip(values * (0.74 - 0.28 * p), 0.0, 1.0)
+    if stage_id == "gas_collapse":
+        return np.clip(np.power(values, 0.84) * (0.64 + 0.24 * p), 0.0, 1.0)
     return values
 
 
@@ -276,6 +311,12 @@ def _apply_epoch_glow(
     if stage_id in {"dark_ages", "dark_matter", "mixed_matter", "gravitational_potential"}:
         filament = _filament_sheen(values, progress)
         return rgb + filament[..., None] * np.array([0.18, 0.20, 0.34], dtype=np.float32)
+    if stage_id in {"gas_collapse", "cold_gas"}:
+        cold_flow = _filament_sheen(values, progress)
+        return rgb + cold_flow[..., None] * np.array([0.08, 0.24, 0.20], dtype=np.float32)
+    if stage_id == "collapse_sites":
+        core = (values[..., None] ** 3) * (0.12 + 0.12 * p)
+        return rgb + core * np.array([0.85, 0.90, 0.48], dtype=np.float32)
     if stage_id == "halo_candidates":
         sparkle = (values[..., None] ** 3) * (0.14 + 0.10 * p)
         return rgb + sparkle * np.array([0.95, 0.52, 0.85], dtype=np.float32)

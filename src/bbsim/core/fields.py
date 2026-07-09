@@ -25,6 +25,9 @@ class UniverseFields:
     gravitational_potential: np.ndarray
     halo_density: np.ndarray
     future_star_sites: np.ndarray
+    cold_gas_density: np.ndarray
+    molecular_cooling: np.ndarray
+    collapse_sites: np.ndarray
     stars: np.ndarray
     metals: np.ndarray
     black_holes: np.ndarray
@@ -53,6 +56,9 @@ def create_empty_fields(grid_size: int) -> UniverseFields:
         gravitational_potential=zero.copy(),
         halo_density=zero.copy(),
         future_star_sites=zero.copy(),
+        cold_gas_density=zero.copy(),
+        molecular_cooling=zero.copy(),
+        collapse_sites=zero.copy(),
         stars=zero.copy(),
         metals=zero.copy(),
         black_holes=zero.copy(),

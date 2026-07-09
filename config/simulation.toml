@@ -39,6 +39,7 @@ reheating_visual_duration_s = 28.0
 nucleosynthesis_visual_duration_s = 28.0
 recombination_visual_duration_s = 38.0
 dark_ages_visual_duration_s = 48.0
+gas_collapse_visual_duration_s = 52.0
 
 
 [visual_director]
@@ -69,3 +70,5 @@ black_hole_efficiency = 0.15
 # gravity_strength amplifies hidden halos/filaments,
 # baryon_infall controls how strongly gas follows the scaffold,
 # gas_pressure keeps gas smoother and visually delayed.
+# v0.0.22: cooling_efficiency and gas_pressure now control gas cooling/collapse
+# before the first-stars stage.

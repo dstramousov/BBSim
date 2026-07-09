@@ -38,12 +38,28 @@ def test_visual_director_supports_dark_age_matter_profiles() -> None:
     mixed = render_visual_frame(field, stage_id="dark_ages", progress=0.7, config=config)
     potential = render_visual_frame(field, stage_id="gravitational_potential", progress=0.7, config=config)
     halos = render_visual_frame(field, stage_id="halo_candidates", progress=0.7, config=config)
+    gas_collapse = render_visual_frame(field, stage_id="gas_collapse", progress=0.7, config=config)
+    cold_gas = render_visual_frame(field, stage_id="cold_gas", progress=0.7, config=config)
+    collapse_sites = render_visual_frame(field, stage_id="collapse_sites", progress=0.7, config=config)
 
     assert dark.profile_id == "dark_matter"
     assert gas.profile_id == "baryon_gas"
     assert mixed.profile_id == "dark_ages"
     assert potential.profile_id == "gravitational_potential"
     assert halos.profile_id == "halo_candidates"
-    assert dark.rgb.shape == gas.rgb.shape == mixed.rgb.shape == potential.rgb.shape == halos.rgb.shape
+    assert gas_collapse.profile_id == "gas_collapse"
+    assert cold_gas.profile_id == "cold_gas"
+    assert collapse_sites.profile_id == "collapse_sites"
+    assert (
+        dark.rgb.shape
+        == gas.rgb.shape
+        == mixed.rgb.shape
+        == potential.rgb.shape
+        == halos.rgb.shape
+        == gas_collapse.rgb.shape
+        == cold_gas.rgb.shape
+        == collapse_sites.rgb.shape
+    )
     assert not np.allclose(dark.rgb, gas.rgb)
     assert not np.allclose(potential.rgb, halos.rgb)
+    assert not np.allclose(cold_gas.rgb, collapse_sites.rgb)

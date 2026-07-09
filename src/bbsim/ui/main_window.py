@@ -199,6 +199,8 @@ class MainWindow(QMainWindow):
         self._display_layer_combo.addItem("Тёмная материя", "dark_density")
         self._display_layer_combo.addItem("Гравитационный каркас", "gravitational_potential")
         self._display_layer_combo.addItem("Будущие гало / звёздные узлы", "future_star_sites")
+        self._display_layer_combo.addItem("Холодный газ", "cold_gas_density")
+        self._display_layer_combo.addItem("Зоны газового коллапса", "collapse_sites")
         self._display_layer_combo.addItem("Обычная материя / газ", "baryon_density")
         self._display_layer_combo.addItem("Смешанный вид", "mixed_matter")
         self._stage_label = QLabel("Состояние: ожидание параметров")
@@ -587,6 +589,18 @@ class MainWindow(QMainWindow):
                     f"• будущих звёздных узлов: {self._context.state.future_star_site_count}",
                 )
             )
+        if stage_id == "gas_collapse":
+            lines.extend(
+                (
+                    "",
+                    "Газ:",
+                    f"• доля охлаждённого газа: {self._context.state.gas_cooling_fraction:.1%}",
+                    f"• доля газа в коллапсе: {self._context.state.collapsed_gas_fraction:.1%}",
+                    f"• облаков коллапса: {self._context.state.collapse_site_count}",
+                    f"• температура холодного газа: {self._context.state.gas_temperature_k:.0f} K",
+                    f"• готовность к первым звёздам: {self._context.state.star_formation_readiness:.2f}",
+                )
+            )
         if time_sample is not None:
             lines.extend(
                 (
@@ -616,6 +630,10 @@ class MainWindow(QMainWindow):
             return fields.future_star_sites, "halo_candidates"
         if layer == "future_star_sites" and self._has_field_signal(fields.halo_density):
             return fields.halo_density, "halo_candidates"
+        if layer == "cold_gas_density" and self._has_field_signal(fields.cold_gas_density):
+            return fields.cold_gas_density, "cold_gas"
+        if layer == "collapse_sites" and self._has_field_signal(fields.collapse_sites):
+            return fields.collapse_sites, "collapse_sites"
         if layer == "baryon_density" and self._has_field_signal(fields.baryon_density):
             return fields.baryon_density, "baryon_gas"
         if layer == "mixed_matter":
@@ -623,6 +641,13 @@ class MainWindow(QMainWindow):
             if mixed is not None:
                 return mixed, "mixed_matter"
 
+        if stage_id == "gas_collapse":
+            if self._has_field_signal(fields.collapse_sites):
+                return self._gas_collapse_field(), "gas_collapse"
+            if self._has_field_signal(fields.cold_gas_density):
+                return fields.cold_gas_density, "gas_collapse"
+            if self._has_field_signal(fields.baryon_density):
+                return fields.baryon_density, "gas_collapse"
         if stage_id == "dark_ages":
             mixed = self._mixed_matter_field()
             if mixed is not None:
@@ -640,6 +665,16 @@ class MainWindow(QMainWindow):
         if self._has_field_signal(fields.seed_delta):
             return fields.seed_delta, stage_id
         return None
+
+    def _gas_collapse_field(self) -> np.ndarray:
+        if self._context is None:
+            raise RuntimeError("gas collapse field requested without context")
+        fields = self._context.fields
+        baryon = self._normalize_for_display(fields.baryon_density) if self._has_field_signal(fields.baryon_density) else np.zeros_like(fields.collapse_sites)
+        cold = self._normalize_for_display(fields.cold_gas_density) if self._has_field_signal(fields.cold_gas_density) else np.zeros_like(baryon)
+        collapse = self._normalize_for_display(fields.collapse_sites) if self._has_field_signal(fields.collapse_sites) else np.zeros_like(baryon)
+        halo = self._normalize_for_display(fields.halo_density) if self._has_field_signal(fields.halo_density) else np.zeros_like(baryon)
+        return (0.30 * baryon + 0.30 * cold + 0.28 * collapse + 0.12 * halo).astype(np.float32)
 
     def _mixed_matter_field(self) -> np.ndarray | None:
         if self._context is None:

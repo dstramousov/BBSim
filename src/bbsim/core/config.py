@@ -64,6 +64,7 @@ class TimeDirectorConfig:
     nucleosynthesis_visual_duration_s: float = 28.0
     recombination_visual_duration_s: float = 38.0
     dark_ages_visual_duration_s: float = 48.0
+    gas_collapse_visual_duration_s: float = 52.0
 
 
 @dataclass(frozen=True, slots=True)

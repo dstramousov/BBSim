@@ -38,6 +38,12 @@ class UniverseState:
     halo_count: int = 0
     halo_mass_fraction: float = 0.0
     future_star_site_count: int = 0
+    cold_gas_fraction: float = 0.0
+    gas_cooling_fraction: float = 0.0
+    collapse_site_count: int = 0
+    collapsed_gas_fraction: float = 0.0
+    star_formation_readiness: float = 0.0
+    gas_temperature_k: float = 0.0
     a_history: list[float] = field(default_factory=list)
     t_history: list[float] = field(default_factory=list)
     h_history: list[float] = field(default_factory=list)
@@ -52,4 +58,7 @@ class UniverseState:
     baryon_contrast_history: list[float] = field(default_factory=list)
     halo_count_history: list[int] = field(default_factory=list)
     gas_lag_history: list[float] = field(default_factory=list)
+    gas_cooling_fraction_history: list[float] = field(default_factory=list)
+    collapse_site_count_history: list[int] = field(default_factory=list)
+    star_formation_readiness_history: list[float] = field(default_factory=list)
     era_history: list[str] = field(default_factory=list)
