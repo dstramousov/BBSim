@@ -12,7 +12,7 @@ spectral_tilt = 0.965
 strength = 0.72
 duration = 0.68
 smoothing = 0.85
-visual_duration_s = 40.0
+visual_duration_s = 8.0
 
 [cosmology]
 h0_gyr_inv = 0.069
@@ -26,6 +26,12 @@ omega_k = 0.0
 reheating_visual_duration_s = 6.0
 nucleosynthesis_visual_duration_s = 6.0
 recombination_visual_duration_s = 7.0
+
+[scale]
+# Size of the displayed comoving patch at a = 1.
+# Used only for human-readable scale overlays; it does not change physics yet.
+box_size_today_mpc = 1000.0
+show_scale_overlay = true
 
 [structure]
 gravity_strength = 1.0

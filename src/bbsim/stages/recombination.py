@@ -9,6 +9,7 @@ import numpy as np
 from bbsim.core.context import UniverseRunContext
 from bbsim.core.expansion import ExpansionEngine
 from bbsim.core.report import StageReport
+from bbsim.core.scale import sample_scale
 
 
 def _smoothstep(value: float) -> float:
@@ -126,6 +127,7 @@ class RecombinationStage:
         """Build the recombination checkpoint report."""
 
         cmb_contrast = float(np.std(context.fields.cmb))
+        scale = sample_scale(context.state, context.config)
         return StageReport(
             stage_id=self.stage_id,
             title="Рекомбинация завершена",
@@ -133,6 +135,7 @@ class RecombinationStage:
                 "Электроны связались с ядрами: горячая плазма стала прозрачной.",
                 f"Температура: {context.state.temperature_k:.0f} K",
                 f"Масштаб a(t): {context.state.a:.3e}",
+                f"Видимый участок сейчас: {scale.box_now_text}",
                 f"Ионизация: {context.state.ionization_fraction:.3f}",
                 f"Непрозрачность: {context.state.opacity:.3f}",
                 f"H(a): {context.state.h_gyr_inv:.3e} 1/Gyr",

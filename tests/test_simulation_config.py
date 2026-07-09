@@ -43,6 +43,10 @@ omega_k = 0.01
 reheating_visual_duration_s = 4.0
 nucleosynthesis_visual_duration_s = 5.0
 recombination_visual_duration_s = 6.0
+
+[scale]
+box_size_today_mpc = 500.0
+show_scale_overlay = false
 """.strip(),
         encoding="utf-8",
     )
@@ -67,6 +71,8 @@ recombination_visual_duration_s = 6.0
     assert config.early_universe.reheating_visual_duration_s == 4.0
     assert config.early_universe.nucleosynthesis_visual_duration_s == 5.0
     assert config.early_universe.recombination_visual_duration_s == 6.0
+    assert config.scale.box_size_today_mpc == 500.0
+    assert config.scale.show_scale_overlay is False
 
 
 def test_simulation_config_phrase_override_wins(tmp_path: Path) -> None:
@@ -107,6 +113,10 @@ omega_k = 10
 reheating_visual_duration_s = 0
 nucleosynthesis_visual_duration_s = 999
 recombination_visual_duration_s = "slow"
+
+[scale]
+box_size_today_mpc = -4
+show_scale_overlay = "yes"
 """.strip(),
         encoding="utf-8",
     )
@@ -134,3 +144,5 @@ recombination_visual_duration_s = "slow"
         config.early_universe.recombination_visual_duration_s
         == UniverseConfig.default().early_universe.recombination_visual_duration_s
     )
+    assert config.scale.box_size_today_mpc == 0.001
+    assert config.scale.show_scale_overlay == UniverseConfig.default().scale.show_scale_overlay

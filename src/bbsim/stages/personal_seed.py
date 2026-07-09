@@ -7,6 +7,7 @@ import numpy as np
 from bbsim.core.context import UniverseRunContext
 from bbsim.core.expansion import ExpansionEngine
 from bbsim.core.report import StageReport
+from bbsim.core.scale import sample_scale
 from bbsim.core.seed import SeedMetrics
 
 
@@ -110,6 +111,7 @@ class PersonalSeedStage:
             raise RuntimeError("personal seed has not been created")
         metrics = context.seed.metrics
         signature_lines = _describe_seed(metrics)
+        scale = sample_scale(context.state, context.config)
         return StageReport(
             stage_id=self.stage_id,
             title="Зерно создано",
@@ -120,6 +122,8 @@ class PersonalSeedStage:
                 f"Мелкая зернистость: {metrics.fine_grain_power:.2f}",
                 f"Потенциал пустот: {metrics.void_potential:.2f}",
                 f"Риск раннего коллапса: {metrics.collapse_risk:.2f}",
+                f"Видимый участок сейчас: {scale.box_now_text}",
+                f"Эквивалент этого же участка сегодня: {scale.box_today_mpc:g} Mpc",
                 "Сигнатура зерна:",
                 *(f"  {line}" for line in signature_lines),
             ),

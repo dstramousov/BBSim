@@ -9,6 +9,7 @@ import numpy as np
 from bbsim.core.context import UniverseRunContext
 from bbsim.core.expansion import ExpansionEngine
 from bbsim.core.report import StageReport
+from bbsim.core.scale import sample_scale
 
 
 class InflationStage:
@@ -90,6 +91,7 @@ class InflationStage:
         inflated_std = float(np.std(context.fields.inflation_delta))
         retained_contrast = inflated_std / max(seed_std, 1.0e-8)
         fine_suppression = self._fine_power_ratio(context)
+        scale = sample_scale(context.state, context.config)
 
         return StageReport(
             stage_id=self.stage_id,
@@ -98,6 +100,8 @@ class InflationStage:
                 f"Инфляционное растяжение: e^{n_e_folds:.1f}",
                 f"Рост масштаба: ×{expansion_factor:.2e}",
                 f"Масштаб a(t): {context.state.a:.3e}",
+                f"Видимый участок сейчас: {scale.box_now_text}",
+                f"1 клетка сейчас: {scale.cell_now_text}",
                 f"Остаточная кривизна: {curvature_suppression:.2e} от исходной",
                 f"Сохранённый контраст ряби: {retained_contrast:.2f}",
                 f"Мелкая рябь подавлена: {fine_suppression:.2f}",

@@ -41,6 +41,18 @@ def timeline_stage_index(
     return None
 
 
+def timeline_checkpoint_position(
+    stage_id: str | None,
+    stages: tuple[TimelineStage, ...] = DEFAULT_TIMELINE_STAGES,
+) -> float:
+    """Return normalized position of a stage checkpoint on the full timeline."""
+
+    stage_index = timeline_stage_index(stage_id, stages)
+    if stage_index is None or not stages:
+        return 0.0
+    return (stage_index + 1) / len(stages)
+
+
 def timeline_progress_position(
     stage_id: str | None,
     local_stage_progress: float,
@@ -48,8 +60,10 @@ def timeline_progress_position(
 ) -> float:
     """Return normalized visual progress on the full timeline.
 
-    The stage marker represents the checkpoint at the end of that stage. Therefore a
-    running stage moves from the previous checkpoint to the current checkpoint.
+    The line starts before the first checkpoint, so the seed reveal itself is visible:
+    the marker moves from the left edge to the `Зерно` checkpoint instead of looking
+    frozen at the first dot. Each later stage moves from the previous checkpoint to
+    the current one.
     """
 
     if not stages:
@@ -57,12 +71,7 @@ def timeline_progress_position(
     stage_index = timeline_stage_index(stage_id, stages)
     if stage_index is None:
         return 0.0
-    if len(stages) == 1:
-        return 1.0
 
     clamped_local_progress = max(0.0, min(1.0, local_stage_progress))
-    if stage_index <= 0:
-        return 0.0
-
-    position = (stage_index - 1 + clamped_local_progress) / (len(stages) - 1)
+    position = (stage_index + clamped_local_progress) / len(stages)
     return max(0.0, min(1.0, position))

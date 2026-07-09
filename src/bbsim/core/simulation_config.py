@@ -12,6 +12,7 @@ from bbsim.core.config import (
     CosmologyConfig,
     EarlyUniverseConfig,
     InflationConfig,
+    ScaleConfig,
     SeedConfig,
     StructureConfig,
     UniverseConfig,
@@ -73,6 +74,7 @@ def _parse_simulation_config(raw: dict[str, Any], defaults: UniverseConfig) -> U
         early_universe=_parse_early_universe_config(
             raw.get("early_universe", {}), defaults.early_universe
         ),
+        scale=_parse_scale_config(raw.get("scale", {}), defaults.scale),
         structure=_parse_structure_config(raw.get("structure", {}), defaults.structure),
     )
 
@@ -173,6 +175,26 @@ def _parse_early_universe_config(raw: Any, defaults: EarlyUniverseConfig) -> Ear
         ),
     )
 
+
+
+def _parse_scale_config(raw: Any, defaults: ScaleConfig) -> ScaleConfig:
+    if not isinstance(raw, dict):
+        return defaults
+
+    show_scale_overlay = raw.get("show_scale_overlay", defaults.show_scale_overlay)
+    if not isinstance(show_scale_overlay, bool):
+        show_scale_overlay = defaults.show_scale_overlay
+
+    return replace(
+        defaults,
+        box_size_today_mpc=_bounded_float(
+            raw.get("box_size_today_mpc"),
+            defaults.box_size_today_mpc,
+            minimum=0.001,
+            maximum=100000.0,
+        ),
+        show_scale_overlay=show_scale_overlay,
+    )
 
 def _parse_structure_config(raw: Any, defaults: StructureConfig) -> StructureConfig:
     if not isinstance(raw, dict):

@@ -9,6 +9,7 @@ import numpy as np
 from bbsim.core.context import UniverseRunContext
 from bbsim.core.expansion import ExpansionEngine
 from bbsim.core.report import StageReport
+from bbsim.core.scale import sample_scale
 
 
 def _smoothstep(value: float) -> float:
@@ -95,6 +96,7 @@ class ReheatingStage:
         """Build the reheating checkpoint report."""
 
         radiation_contrast = float(np.std(context.fields.radiation))
+        scale = sample_scale(context.state, context.config)
         return StageReport(
             stage_id=self.stage_id,
             title="Разогрев завершён",
@@ -102,6 +104,7 @@ class ReheatingStage:
                 "Энергия инфляции переведена в горячую радиационно-доминирующую плазму.",
                 f"Температура: {context.state.temperature_k:.2e} K",
                 f"Масштаб a(t): {context.state.a:.3e}",
+                f"Видимый участок сейчас: {scale.box_now_text}",
                 f"Эпоха по плотностям: {context.state.era}",
                 f"Доля radiation: {context.state.frac_r:.2f}",
                 f"Доля matter: {context.state.frac_m:.2f}",
@@ -182,6 +185,7 @@ class NucleosynthesisStage:
     def build_report(self, context: UniverseRunContext) -> StageReport:
         """Build the nucleosynthesis checkpoint report."""
 
+        scale = sample_scale(context.state, context.config)
         return StageReport(
             stage_id=self.stage_id,
             title="Первичный состав готов",
@@ -192,6 +196,7 @@ class NucleosynthesisStage:
                 f"Следы лития: {context.state.lithium_trace:.1e}",
                 "Тяжёлые элементы: почти 0 — они появятся только в звёздах.",
                 f"Температура: {context.state.temperature_k:.2e} K",
+                f"Видимый участок сейчас: {scale.box_now_text}",
                 f"Доминирующий компонент: {context.state.era}",
                 f"Доля radiation: {context.state.frac_r:.2f}",
                 f"Доля matter: {context.state.frac_m:.2f}",

@@ -29,7 +29,7 @@ class InflationConfig:
     strength: float = 0.72
     duration: float = 0.68
     smoothing: float = 0.85
-    visual_duration_s: float = 40.0
+    visual_duration_s: float = 8.0
 
 
 @dataclass(frozen=True, slots=True)
@@ -50,6 +50,14 @@ class EarlyUniverseConfig:
     reheating_visual_duration_s: float = 6.0
     nucleosynthesis_visual_duration_s: float = 6.0
     recombination_visual_duration_s: float = 7.0
+
+
+@dataclass(frozen=True, slots=True)
+class ScaleConfig:
+    """Displayed comoving box scale used for human-readable distance overlays."""
+
+    box_size_today_mpc: float = 1000.0
+    show_scale_overlay: bool = True
 
 
 @dataclass(frozen=True, slots=True)
@@ -74,6 +82,7 @@ class UniverseConfig:
     cosmology: CosmologyConfig
     inflation: InflationConfig
     early_universe: EarlyUniverseConfig
+    scale: ScaleConfig
     structure: StructureConfig
 
     @staticmethod
@@ -92,5 +101,6 @@ class UniverseConfig:
             cosmology=CosmologyConfig(),
             inflation=InflationConfig(),
             early_universe=EarlyUniverseConfig(),
+            scale=ScaleConfig(),
             structure=StructureConfig(),
         )

@@ -87,3 +87,28 @@ def test_recombination_releases_transparent_cmb() -> None:
     assert context.fields.cmb.any()
     assert context.state.ionization_fraction_history
     assert context.state.opacity_history
+
+
+def test_default_inflation_visual_duration_is_observable_not_stuck() -> None:
+    config = UniverseConfig.default(player_seed_phrase="Dimas")
+
+    assert 1.0 <= config.inflation.visual_duration_s <= 12.0
+
+
+def test_live_pipeline_leaves_seed_stage_after_short_playback() -> None:
+    config = UniverseConfig.default(player_seed_phrase="Dimas")
+    context = create_run_context(config=config, backend=NumpyBackend())
+    pipeline = create_default_pipeline()
+
+    report = None
+    for _ in range(80):
+        report = pipeline.step_live(context, dt=0.033)
+        if report is not None:
+            break
+
+    assert report is not None
+    assert report.stage_id == "personal_seed"
+    pipeline.advance(context)
+
+    pipeline.step_live(context, dt=0.033)
+    assert context.state.current_stage == "inflation"

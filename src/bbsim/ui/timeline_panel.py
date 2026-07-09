@@ -8,7 +8,12 @@ from PySide6.QtCore import QPointF, QRectF, Qt
 from PySide6.QtGui import QColor, QFont, QLinearGradient, QPainter, QPainterPath, QPen
 from PySide6.QtWidgets import QSizePolicy, QWidget
 
-from bbsim.core.timeline import DEFAULT_TIMELINE_STAGES, TimelineStage, timeline_progress_position
+from bbsim.core.timeline import (
+    DEFAULT_TIMELINE_STAGES,
+    TimelineStage,
+    timeline_checkpoint_position,
+    timeline_progress_position,
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -75,11 +80,9 @@ class TimelinePanel(QWidget):
         self._draw_current_marker(painter, progress_x, line_y)
 
     def _checkpoint_points(self, left: int, width: int, line_y: int) -> list[QPointF]:
-        if len(self._stages) == 1:
-            return [QPointF(left + width / 2, line_y)]
         return [
-            QPointF(left + width * index / (len(self._stages) - 1), line_y)
-            for index, _stage in enumerate(self._stages)
+            QPointF(left + width * timeline_checkpoint_position(stage.stage_id, self._stages), line_y)
+            for stage in self._stages
         ]
 
     @staticmethod

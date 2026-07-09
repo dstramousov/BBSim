@@ -9,6 +9,7 @@ from PySide6.QtWidgets import (
     QCheckBox,
     QDoubleSpinBox,
     QFormLayout,
+    QGridLayout,
     QGroupBox,
     QLabel,
     QLineEdit,
@@ -29,7 +30,9 @@ from bbsim.core.config import CosmologyConfig, InflationConfig, SeedConfig, Univ
 from bbsim.core.context import UniverseRunContext, create_run_context
 from bbsim.core.pipeline import UniversePipeline, create_default_pipeline
 from bbsim.numeric.numpy_backend import NumpyBackend
+from bbsim.core.scale import build_scale_overlay_lines
 from bbsim.render.field_renderer import field_to_display
+from bbsim.ui.space_overlay import SpaceScaleOverlay
 from bbsim.ui.timeline_panel import TimelinePanel, TimelineViewState
 
 _RUN_IDLE = "idle"
@@ -54,6 +57,13 @@ def _create_seed_colormap() -> pg.ColorMap:
         dtype=np.ubyte,
     )
     return pg.ColorMap(positions, colors)
+
+
+def _smooth_visual_progress(value: float) -> float:
+    """Return smooth visual 0..1 progress for UI-only fades."""
+
+    clamped = float(np.clip(value, 0.0, 1.0))
+    return clamped * clamped * (3.0 - 2.0 * clamped)
 
 
 class MainWindow(QMainWindow):
@@ -149,9 +159,18 @@ class MainWindow(QMainWindow):
         self._image.getView().setMouseEnabled(x=False, y=False)
         self._image.getView().setAspectLocked(not self._field_fill_canvas)
 
+        self._space_overlay = SpaceScaleOverlay()
+        self._image_container = QWidget()
+        image_layout = QGridLayout(self._image_container)
+        image_layout.setContentsMargins(0, 0, 0, 0)
+        image_layout.setSpacing(0)
+        image_layout.addWidget(self._image, 0, 0)
+        image_layout.addWidget(self._space_overlay, 0, 0)
+        self._space_overlay.raise_()
+
         self._field_stack = QStackedWidget()
         self._field_stack.addWidget(self._field_placeholder)
-        self._field_stack.addWidget(self._image)
+        self._field_stack.addWidget(self._image_container)
 
         self._plot_placeholder = QLabel(
             "График появится после запуска BIG BANG."
@@ -318,6 +337,9 @@ class MainWindow(QMainWindow):
         self._pipeline_finished_reported = False
         self._set_parameter_inputs_enabled(True)
         self._field_stack.setCurrentWidget(self._field_placeholder)
+        self._space_overlay.set_overlay_state(
+            lines=(), stage_id=None, stage_progress=0.0, visible=False
+        )
         self._plot_stack.setCurrentWidget(self._plot_placeholder)
         self._clear_plot_data()
         self._timeline_panel.set_timeline_state(TimelineViewState())
@@ -347,14 +369,19 @@ class MainWindow(QMainWindow):
         self._pipeline_finished_reported = False
         self._report.clear()
         self._clear_plot_data()
-        self._field_stack.setCurrentWidget(self._image)
+        self._field_stack.setCurrentWidget(self._image_container)
         self._plot_stack.setCurrentWidget(self._plot_panel)
         self._timeline_panel.set_timeline_state(TimelineViewState())
         self._set_parameter_inputs_enabled(False)
         self._run_state = _RUN_RUNNING
         self._main_button.setText("ПАУЗА")
         self._stage_label.setText("Состояние: эволюция запущена")
-        self._timer.start()
+        # Draw the first live frame immediately. Otherwise the user can see a
+        # fully populated field while the timeline still looks stuck until the
+        # first timer event arrives.
+        self._tick_simulation()
+        if self._run_state == _RUN_RUNNING:
+            self._timer.start()
 
     def _pause_live_run(self) -> None:
         self._timer.stop()
@@ -394,6 +421,7 @@ class MainWindow(QMainWindow):
                 omega_k=self._omega_k_spin.value(),
             ),
             early_universe=self._base_config.early_universe,
+            scale=self._base_config.scale,
             structure=self._base_config.structure,
         )
 
@@ -404,7 +432,7 @@ class MainWindow(QMainWindow):
             self._finish_live_run()
             return
 
-        dt = self._timer.interval() / 1000.0
+        dt = max(self._timer.interval() / 1000.0, 1.0e-3)
         report = self._pipeline.step_live(self._context, dt=dt)
         active_stage_id = self._context.state.current_stage
         self._show_current_field(active_stage_id)
@@ -456,9 +484,12 @@ class MainWindow(QMainWindow):
         else:
             return
         display = field_to_display(field).T
-        self._field_stack.setCurrentWidget(self._image)
+        if stage_id == "personal_seed":
+            display = display * _smooth_visual_progress(self._context.state.stage_progress)
+        self._field_stack.setCurrentWidget(self._image_container)
         self._image.setImage(display, levels=(0.0, 1.0), autoRange=False)
         self._fit_field_to_canvas(display.shape)
+        self._update_scale_overlay(stage_id)
 
     def _fit_field_to_canvas(self, image_shape: tuple[int, ...]) -> None:
         if len(image_shape) < 2:
@@ -468,6 +499,22 @@ class MainWindow(QMainWindow):
         view = self._image.getView()
         view.setAspectLocked(not self._field_fill_canvas)
         view.setRange(xRange=(0, width), yRange=(0, height), padding=0.0)
+
+    def _update_scale_overlay(self, stage_id: str | None) -> None:
+        if self._context is None:
+            self._space_overlay.set_overlay_state(
+                lines=(), stage_id=None, stage_progress=0.0, visible=False
+            )
+            return
+
+        visible = self._context.config.scale.show_scale_overlay
+        lines = build_scale_overlay_lines(self._context.state, self._context.config) if visible else ()
+        self._space_overlay.set_overlay_state(
+            lines=lines,
+            stage_id=stage_id,
+            stage_progress=self._context.state.stage_progress,
+            visible=visible,
+        )
 
     def _show_report(self, report) -> None:
         lines = [report.title, ""]
