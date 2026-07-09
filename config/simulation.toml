@@ -51,6 +51,10 @@ epoch_transition_fraction = 0.18
 inflation_zoom_strength = 1.55
 reheating_pulse_strength = 0.14
 recombination_clearing_strength = 0.36
+# 0 disables the cinematic astrophotography pass; 1 keeps the full styled view.
+astro_style_strength = 1.0
+astro_bloom_strength = 1.0
+astro_star_density = 1.0
 
 [scale]
 # Size of the displayed comoving patch at a = 1.

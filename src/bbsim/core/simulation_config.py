@@ -147,7 +147,9 @@ def _parse_inflation_config(raw: Any, defaults: InflationConfig) -> InflationCon
         defaults,
         strength=_bounded_float(raw.get("strength"), defaults.strength, minimum=0.0, maximum=3.0),
         duration=_bounded_float(raw.get("duration"), defaults.duration, minimum=0.0, maximum=3.0),
-        smoothing=_bounded_float(raw.get("smoothing"), defaults.smoothing, minimum=0.0, maximum=1.0),
+        smoothing=_bounded_float(
+            raw.get("smoothing"), defaults.smoothing, minimum=0.0, maximum=1.0
+        ),
         visual_duration_s=_bounded_float(
             raw.get("visual_duration_s"),
             defaults.visual_duration_s,
@@ -306,6 +308,24 @@ def _parse_visual_director_config(raw: Any, defaults: VisualDirectorConfig) -> V
             defaults.recombination_clearing_strength,
             minimum=0.0,
             maximum=0.80,
+        ),
+        astro_style_strength=_bounded_float(
+            raw.get("astro_style_strength"),
+            defaults.astro_style_strength,
+            minimum=0.0,
+            maximum=1.0,
+        ),
+        astro_bloom_strength=_bounded_float(
+            raw.get("astro_bloom_strength"),
+            defaults.astro_bloom_strength,
+            minimum=0.0,
+            maximum=2.0,
+        ),
+        astro_star_density=_bounded_float(
+            raw.get("astro_star_density"),
+            defaults.astro_star_density,
+            minimum=0.0,
+            maximum=3.0,
         ),
     )
 

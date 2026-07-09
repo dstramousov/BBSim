@@ -85,6 +85,9 @@ class VisualDirectorConfig:
     inflation_zoom_strength: float = 1.55
     reheating_pulse_strength: float = 0.14
     recombination_clearing_strength: float = 0.36
+    astro_style_strength: float = 1.0
+    astro_bloom_strength: float = 1.0
+    astro_star_density: float = 1.0
 
 
 @dataclass(frozen=True, slots=True)

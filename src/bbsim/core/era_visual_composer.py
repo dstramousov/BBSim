@@ -13,6 +13,7 @@ from dataclasses import dataclass
 
 import numpy as np
 
+from bbsim.core.astro_visual_style import AstroVisualLayers, apply_astro_visual_style
 from bbsim.core.config import VisualDirectorConfig
 from bbsim.core.fields import UniverseFields
 from bbsim.core.visual_director import VisualFrame, render_visual_frame
@@ -68,6 +69,22 @@ def render_era_visual_frame(
         config=config,
     )
     rgb = _apply_scene_overlays(frame.rgb, scene, progress)
+    rgb = apply_astro_visual_style(
+        rgb,
+        AstroVisualLayers(
+            field=scene.field,
+            warm_haze=scene.warm_haze,
+            cool_haze=scene.cool_haze,
+            edge_layer=scene.edge_layer,
+            dimming_layer=scene.dimming_layer,
+            star_points=scene.star_points,
+        ),
+        stage_id=scene.visual_stage_id,
+        progress=progress,
+        style_strength=config.astro_style_strength,
+        bloom_strength=config.astro_bloom_strength,
+        star_density=config.astro_star_density,
+    )
     return VisualFrame(
         rgb=np.clip(rgb, 0.0, 1.0).astype(np.float32),
         profile_id=frame.profile_id,
@@ -202,7 +219,10 @@ def compose_era_visual_scene(
         )
 
     if stage == "first_stars":
-        gas = _normalize01(_prefer(cold_gas, baryon, collapse))
+        gas = _normalize01(
+            0.58 * _normalize01(_prefer(baryon, cold_gas, collapse))
+            + 0.42 * _normalize01(_prefer(cold_gas, collapse, baryon))
+        )
         knots = _normalize01(_prefer(collapse, future_sites, halo))
         stars = _normalize01(_prefer(first_stars, ignition, collapse))
         radiation_glow = _normalize01(_prefer(stellar_radiation, bubbles, stars))
@@ -223,7 +243,11 @@ def compose_era_visual_scene(
         radiation_glow = _normalize01(_prefer(stellar_radiation, stars))
         ionized = _normalize01(_prefer(ionization, bubbles, radiation_glow))
         bubble_layer = _normalize01(_prefer(bubbles, ionized, radiation_glow))
-        neutral_gas = _normalize01(_prefer(cold_gas, baryon, dark))
+        neutral_gas = _normalize01(
+            0.50 * _normalize01(_prefer(baryon, cold_gas, dark))
+            + 0.32 * _normalize01(_prefer(cold_gas, baryon, dark))
+            + 0.18 * _normalize01(_prefer(dark, baryon, cold_gas))
+        )
         neutral_mask = np.clip(1.0 - 0.70 * ionized, 0.0, 1.0)
         field = _normalize01(
             0.25 * neutral_gas * neutral_mask
@@ -355,8 +379,12 @@ def _star_points(field: np.ndarray, *, percentile: float) -> np.ndarray:
     if data.size == 0 or float(np.nanstd(data)) <= 1.0e-7:
         return np.zeros_like(data, dtype=np.float32)
     threshold = float(np.percentile(data, percentile))
-    peaks = np.where(data >= threshold, data, 0.0).astype(np.float32)
-    return _contrast(_normalize01(peaks), gamma=0.34)
+    local_max = data >= np.roll(data, 1, axis=0)
+    local_max &= data >= np.roll(data, -1, axis=0)
+    local_max &= data >= np.roll(data, 1, axis=1)
+    local_max &= data >= np.roll(data, -1, axis=1)
+    peaks = np.where(local_max & (data >= threshold), data, 0.0).astype(np.float32)
+    return _contrast(_normalize01(peaks), gamma=0.30)
 
 
 def _bubble_fronts(bubbles: np.ndarray, ionization: np.ndarray) -> np.ndarray:

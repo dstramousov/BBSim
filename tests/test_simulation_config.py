@@ -57,6 +57,15 @@ gas_collapse_visual_duration_s = 77.0
 first_stars_visual_duration_s = 88.0
 reionization_visual_duration_s = 99.0
 
+[visual_director]
+epoch_transition_fraction = 0.25
+inflation_zoom_strength = 1.8
+reheating_pulse_strength = 0.2
+recombination_clearing_strength = 0.4
+astro_style_strength = 0.7
+astro_bloom_strength = 1.3
+astro_star_density = 1.5
+
 [scale]
 box_size_today_mpc = 500.0
 show_scale_overlay = false
@@ -95,6 +104,13 @@ show_scale_overlay = false
     assert config.time_director.gas_collapse_visual_duration_s == 77.0
     assert config.time_director.first_stars_visual_duration_s == 88.0
     assert config.time_director.reionization_visual_duration_s == 99.0
+    assert config.visual_director.epoch_transition_fraction == 0.25
+    assert config.visual_director.inflation_zoom_strength == 1.8
+    assert config.visual_director.reheating_pulse_strength == 0.2
+    assert config.visual_director.recombination_clearing_strength == 0.4
+    assert config.visual_director.astro_style_strength == 0.7
+    assert config.visual_director.astro_bloom_strength == 1.3
+    assert config.visual_director.astro_star_density == 1.5
     assert config.scale.box_size_today_mpc == 500.0
     assert config.scale.show_scale_overlay is False
 
@@ -151,6 +167,15 @@ gas_collapse_visual_duration_s = 999
 first_stars_visual_duration_s = 0
 reionization_visual_duration_s = 999
 
+[visual_director]
+epoch_transition_fraction = -1
+inflation_zoom_strength = 99
+reheating_pulse_strength = 99
+recombination_clearing_strength = 99
+astro_style_strength = 99
+astro_bloom_strength = -1
+astro_star_density = 99
+
 [scale]
 box_size_today_mpc = -4
 show_scale_overlay = "yes"
@@ -195,5 +220,12 @@ show_scale_overlay = "yes"
     assert config.time_director.gas_collapse_visual_duration_s == 600.0
     assert config.time_director.first_stars_visual_duration_s == 1.0
     assert config.time_director.reionization_visual_duration_s == 600.0
+    assert config.visual_director.epoch_transition_fraction == 0.0
+    assert config.visual_director.inflation_zoom_strength == 4.0
+    assert config.visual_director.reheating_pulse_strength == 0.50
+    assert config.visual_director.recombination_clearing_strength == 0.80
+    assert config.visual_director.astro_style_strength == 1.0
+    assert config.visual_director.astro_bloom_strength == 0.0
+    assert config.visual_director.astro_star_density == 3.0
     assert config.scale.box_size_today_mpc == 0.001
     assert config.scale.show_scale_overlay == UniverseConfig.default().scale.show_scale_overlay
