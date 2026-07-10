@@ -139,7 +139,11 @@ show_scale_overlay = true
 BBSIM_SIMULATION_CONFIG=/path/to/simulation.toml bbsim
 python -m bbsim --headless --simulation-config /path/to/simulation.toml
 python -m bbsim --headless --phrase "Other Seed"
+python -m bbsim --epoch-gallery out/epoch_gallery --phrase "Dimas"
+python -m bbsim --epoch-gallery out/epoch_gallery --gallery-scale 4
 ```
+
+`--epoch-gallery` запускает pipeline без Qt и сохраняет по одному PNG на каждую текущую эпоху. Рядом создаются `manifest.json` и `index.md`, чтобы быстро открыть набор кадров, сравнить версии визуала и обсуждать конкретный файл вроде `08_first_stars.png`, а не ловить момент руками в UI.
 
 ## Первый запуск UI
 
@@ -249,3 +253,11 @@ ruff check .
 - Главное окно усиливает эпохальные сцены туманностями, пылевыми прожилками, bloom и первыми звёздными источниками без изменения физики симуляции.
 - Добавлены настройки `astro_style_strength`, `astro_bloom_strength`, `astro_star_density` в `[visual_director]`.
 - Добавлены тесты астро-стиля и парсинга новых визуальных настроек.
+
+## v0.0.26 -> v0.0.27
+
+- Синхронизирована версия проекта до 0.0.27.
+- Добавлен headless-режим `--epoch-gallery DIR` для сохранения PNG-снимков всех текущих эпох.
+- Галерея создаёт `manifest.json` и `index.md`, чтобы визуал эпох можно было сравнивать без ручного тыканья UI.
+- PNG сохраняются без новых runtime-зависимостей: добавлен маленький внутренний writer и масштабирование кадров через `--gallery-scale`.
+- Добавлены тесты epoch gallery и PNG-вывода.
